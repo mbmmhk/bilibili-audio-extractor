@@ -84,3 +84,46 @@ bilibili-audio-extractor/
 ## License
 
 MIT License
+
+## 环境要求
+
+- Python 3.8+
+- FFmpeg
+
+### FFmpeg 安装说明
+
+#### Windows 安装方法
+1. 方法一（推荐）：
+   - 下载 [FFmpeg](https://www.gyan.dev/ffmpeg/builds/) 预编译包
+   - 解压下载的文件
+   - 将解压后的 ffmpeg.exe、ffprobe.exe、ffplay.exe 放入项目的 ffmpeg 目录中
+
+2. 方法二：
+   - 使用 [Chocolatey](https://chocolatey.org/) 包管理器安装：
+   ```bash
+   choco install ffmpeg
+   ```
+
+#### macOS 安装方法
+使用 Homebrew 包管理器安装：
+```bash
+brew install ffmpeg
+```
+
+#### Linux 安装方法
+Ubuntu/Debian:
+```bash
+sudo apt update
+sudo apt install ffmpeg
+```
+
+CentOS/RHEL:
+```bash
+sudo yum install epel-release
+sudo yum install ffmpeg
+```
+
+验证安装：
+```bash
+ffmpeg -version
+```
