@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B站翻唱歌曲识别</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #fb7299;
+            --secondary-color: #00a1d6;
+            --background-color: #f4f5f7;
+            --text-color: #18191c;
+            --card-shadow: 0 8px 24px rgba(0,0,0,0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 28px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e3e5e7;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(0,161,214,0.1);
+        }
+
+        button {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #0091c0;
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-container {
+            margin: 32px 0;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e3e5e7;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
+            width: 0%;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                rgba(255,255,255,0.1) 0%,
+                rgba(255,255,255,0.3) 50%,
+                rgba(255,255,255,0.1) 100%
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 12px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .results {
+            margin-top: 32px;
+        }
+
+        .song-item {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid #e3e5e7;
+            transition: all 0.3s ease;
+        }
+
+        .song-item:hover {
+            transform: translateX(4px);
+            border-color: var(--secondary-color);
+        }
+
+        .song-item p {
+            margin: 8px 0;
+        }
+
+        .song-item strong {
+            color: var(--primary-color);
+            margin-right: 8px;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .error-message {
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #ff4d4f;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 16px;
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 20px auto;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>B站翻唱歌曲识别</h1>
+            
+            <div class="input-group">
+                <input type="text" id="videoUrl" placeholder="请输入B站视频链接（BV号）">
+                <button id="submitBtn" onclick="submitUrl()">开始识别</button>
+            </div>
+            
+            <div class="error-message" id="errorMessage"></div>
+            
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="status">准备中...</div>
+            </div>
+        </div>
+        
+        <div class="results"></div>
+    </div>
+
+    <script>
+        let progressInterval;
+        
+        async function submitUrl() {
+            const videoUrl = document.getElementById('videoUrl').value;
+            const errorMessage = document.getElementById('errorMessage');
+            
+            if (!videoUrl) {
+                showError('请输入视频链接！');
+                return;
+            }
+            
+            // 重置UI
+            errorMessage.style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+            document.querySelector('.progress-container').style.display = 'block';
+            document.querySelector('.results').innerHTML = '';
+            
+            try {
+                const response = await fetch('/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: videoUrl }),
+                });
+                
+                if (!response.ok) {
+                    throw new Error('提交失败');
+                }
+                
+                startProgressPolling();
+                
+            } catch (error) {
+                showError('提交失败：' + error.message);
+                resetUI();
+            }
+        }
+        
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+        
+        function startProgressPolling() {
+            progressInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/progress');
+                    const data = await response.json();
+                    
+                    document.querySelector('.progress-fill').style.width = data.percent + '%';
+                    document.querySelector('.status').textContent = data.message;
+                    
+                    if (data.status === 'done' || data.status === 'error') {
+                        clearInterval(progressInterval);
+                        if (data.status === 'done' && data.results) {
+                            displayResults(data.results);
+                        } else if (data.status === 'error') {
+                            showError(data.message);
+                        }
+                        resetUI();
+                    }
+                    
+                } catch (error) {
+                    console.error('获取进度失败：', error);
+                    showError('获取进度失败');
+                }
+            }, 1000);
+        }
+        
+        function displayResults(results) {
+            const resultsDiv = document.querySelector('.results');
+            
+            if (results.length === 0) {
+                const emptyCard = document.createElement('div');
+                emptyCard.className = 'card';
+                emptyCard.innerHTML = '<p style="text-align: center; color: #666;">未识别到歌曲</p>';
+                resultsDiv.appendChild(emptyCard);
+                return;
+            }
+            
+            const resultCard = document.createElement('div');
+            resultCard.className = 'card';
+            resultCard.innerHTML = '<h2 style="color: var(--secondary-color); margin-bottom: 20px;">识别结果</h2>';
+            
+            results.forEach(song => {
+                const songDiv = document.createElement('div');
+                songDiv.className = 'song-item';
+                songDiv.innerHTML = `
+                    <p><strong>歌曲</strong>${song.title}</p>
+                    <p><strong>艺术家</strong>${song.artist}</p>
+                    <p><strong>时间戳</strong>${formatTime(song.play_offset_ms)}</p>
+                    <p><strong>置信度</strong>${song.confidence}%</p>
+                `;
+                resultCard.appendChild(songDiv);
+            });
+            
+            resultsDiv.appendChild(resultCard);
+        }
+        
+        function formatTime(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+        
+        function resetUI() {
+            document.getElementById('submitBtn').disabled = false;
+        }
+    </script>
+</body>
+</html> 

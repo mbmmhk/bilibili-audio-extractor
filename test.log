@@ -1,0 +1,130 @@
+2025-02-01 00:43:28,317 - video_processor - INFO - 当前目录: C:\Users\Administrator\Desktop\bilibili\src
+2025-02-01 00:43:28,317 - video_processor - INFO - 项目根目录: C:\Users\Administrator\Desktop\bilibili
+2025-02-01 00:43:28,317 - video_processor - INFO - 下载目录: C:\Users\Administrator\Desktop\bilibili\downloads
+2025-02-01 00:43:28,317 - video_processor - INFO - 尝试使用 ffmpeg 路径: C:\Users\Administrator\Desktop\bilibili\ffmpeg\ffmpeg.exe
+2025-02-01 00:43:28,317 - video_processor - INFO - ffmpeg 配置成功
+2025-02-01 00:43:28,317 - video_processor - INFO - 开始处理视频URL: https://www.bilibili.com/video/BV1u84y1P7fv
+2025-02-01 00:43:28,317 - video_processor - INFO - 提取到视频ID: BV1u84y1P7fv
+2025-02-01 00:43:28,317 - video_processor - INFO - 开始下载视频并提取音频
+2025-02-01 00:43:30,836 - video_processor - INFO - 进度更新: 下载中: 0.0% - 1.0MB/s - 剩余2秒 (0.013989663496678137%)
+2025-02-01 00:43:30,836 - video_processor - INFO - 进度更新: 下载中: 0.0% - 1.5MB/s - 剩余1秒 (0.041968990490034414%)
+2025-02-01 00:43:30,837 - video_processor - INFO - 进度更新: 下载中: 0.1% - 2.3MB/s - 剩余1秒 (0.09792764447674697%)
+2025-02-01 00:43:30,838 - video_processor - INFO - 进度更新: 下载中: 0.2% - 3.7MB/s - 剩余0秒 (0.20984495245017207%)
+2025-02-01 00:43:30,849 - video_processor - INFO - 进度更新: 下载中: 0.4% - 2.0MB/s - 剩余1秒 (0.4336795683970223%)
+2025-02-01 00:43:30,885 - video_processor - INFO - 进度更新: 下载中: 0.9% - 1.2MB/s - 剩余2秒 (0.8813488002907227%)
+2025-02-01 00:43:30,926 - video_processor - INFO - 进度更新: 下载中: 1.8% - 1.4MB/s - 剩余1秒 (1.7766872640781237%)
+2025-02-01 00:43:30,971 - video_processor - INFO - 进度更新: 下载中: 3.6% - 1.8MB/s - 剩余1秒 (3.567364191652925%)
+2025-02-01 00:43:31,033 - video_processor - INFO - 进度更新: 下载中: 7.1% - 2.5MB/s - 剩余0秒 (7.148718046802528%)
+2025-02-01 00:43:31,100 - video_processor - INFO - 进度更新: 下载中: 14.3% - 3.8MB/s - 剩余0秒 (14.311425757101734%)
+2025-02-01 00:43:31,248 - video_processor - INFO - 进度更新: 下载中: 28.6% - 4.8MB/s - 剩余0秒 (28.63684117770015%)
+2025-02-01 00:43:31,360 - video_processor - INFO - 进度更新: 下载中: 40.0% - 5.3MB/s - 剩余0秒 (40.0%)
+2025-02-01 00:43:31,361 - video_processor - INFO - 进度更新: 下载完成，准备转换格式... (40%)
+2025-02-01 00:43:31,365 - video_processor - INFO - 进度更新: 开始转换音频格式... (40%)
+2025-02-01 00:43:31,365 - video_processor - INFO - 进度更新: 开始转换音频格式... (40%)
+2025-02-01 00:43:31,613 - video_processor - INFO - 进度更新: 音频转换完成 (50%)
+2025-02-01 00:43:31,613 - video_processor - INFO - 进度更新: 音频转换完成 (50%)
+2025-02-01 00:43:31,614 - video_processor - INFO - 进度更新: 开始转换音频格式... (40%)
+2025-02-01 00:43:31,614 - video_processor - INFO - 进度更新: 音频转换完成 (50%)
+2025-02-01 00:43:31,622 - video_processor - INFO - 音频文件已保存: C:\Users\Administrator\Desktop\bilibili\downloads\BV1u84y1P7fv.m4a.temp.wav
+2025-02-01 00:43:31,624 - song_matcher - INFO - ACRCloud配置 - access_key长度: 32, access_secret长度: 40
+2025-02-01 00:43:31,624 - song_matcher - INFO - 开始处理音频文件: C:\Users\Administrator\Desktop\bilibili\downloads\BV1u84y1P7fv.m4a.temp.wav
+2025-02-01 00:43:31,653 - song_matcher - INFO - 音频总长度: 224.88秒
+2025-02-01 00:43:32,159 - song_matcher - INFO - 将音频分成 22 个片段进行识别
+2025-02-01 00:43:32,160 - song_matcher - INFO - 正在处理第 1/22 个片段 (长度: 15.0秒)
+2025-02-01 00:43:35,594 - song_matcher - INFO - 请求数据: {'access_key': '1ca80e9a45eb6ad121ba854109851046', 'sample_bytes': 480044, 'timestamp': '1738341812', 'signature': 'Nq21ym2c+Jo0hfjVeQzxjfPskwA=', 'data_type': 'audio', 'signature_version': '1'}
+2025-02-01 00:43:35,594 - song_matcher - INFO - 签名字符串: POST
+/v1/identify
+1ca80e9a45eb6ad121ba854109851046
+audio
+1
+1738341812
+2025-02-01 00:43:35,594 - song_matcher - INFO - 响应状态码: 200
+2025-02-01 00:43:35,594 - song_matcher - INFO - 响应内容: {"cost_time":3.1300001144409,"result_type":0,"status":{"msg":"Success","code":0,"version":"1.0"},"metadata":{"timestamp_utc":"2025-01-31 16:43:34","music":[{"label":"å¤©ç¸±æéå¬å¸","score":100,"duration_ms":228000,"db_begin_time_offset_ms":3220,"db_end_time_offset_ms":14400,"sample_begin_time_offset_ms":0,"external_metadata":{"deezer":{"track":{"id":"1424493412","name":"ä¸äº¬ä¸å¤ªç­"},"artists":[{"name":"æ´å¤©ä¾","id":"11313636"}],"album":{"name":""}},"spotify":{"track":{"id":"7Jjt2Tr2JoDtjiNe9lep8v","name":"ä¸äº¬ä¸å¤ªç­"},"artists":[{"name":"æ´å¤©ä¾","id":"6wH1UiZO1V6f7rZ7b0mlci"}],"album":{"name":"ä¸äº¬ä¸å¤ªç­","id":"1eRmKFhJEhMq5oifemI9XJ"}},"youtube":{"vid":"DIFo5sVb3pI"}},"play_offset_ms":14660,"result_from":1,"title":"ä¸äº¬ä¸å¤ªç­","external_ids":{"upc":"5056530002934","isrc":"QZNC62100836"},"sample_end_time_offset_ms":11180,"album":{"name":"ä¸äº¬ä¸å¤ªç­"},"release_date":"2015-04-24","genres":[{"name":"Pop","id":132}],"acrid":"74f68dbe010dad0d9e825d724bcc4f6b","artists":[{"name":"æ´å¤©ä¾"}]}]}}
+
+2025-02-01 00:43:35,594 - song_matcher - INFO - 找到匹配歌曲: ä¸äº¬ä¸å¤ªç­ - æ´å¤©ä¾ (置信度: 100%)
+2025-02-01 00:43:35,600 - song_matcher - INFO - 第 1 个片段识别到 1 首歌曲
+2025-02-01 00:43:36,601 - song_matcher - INFO - 正在处理第 2/22 个片段 (长度: 15.0秒)
+2025-02-01 00:43:39,811 - song_matcher - INFO - 请求数据: {'access_key': '1ca80e9a45eb6ad121ba854109851046', 'sample_bytes': 480044, 'timestamp': '1738341816', 'signature': 'zYK3awtanKkNqCoAhy7oZFkT4GE=', 'data_type': 'audio', 'signature_version': '1'}
+2025-02-01 00:43:39,813 - song_matcher - INFO - 签名字符串: POST
+/v1/identify
+1ca80e9a45eb6ad121ba854109851046
+audio
+1
+1738341816
+2025-02-01 00:43:39,815 - song_matcher - INFO - 响应状态码: 200
+2025-02-01 00:43:39,815 - song_matcher - INFO - 响应内容: {"cost_time":2.8619999885559,"result_type":0,"status":{"msg":"Success","code":0,"version":"1.0"},"metadata":{"timestamp_utc":"2025-01-31 16:43:39","music":[{"score":100,"sample_end_time_offset_ms":8920,"duration_ms":224000,"db_begin_time_offset_ms":12780,"db_end_time_offset_ms":21700,"sample_begin_time_offset_ms":0,"external_metadata":{"spotify":{"track":{"id":"5jJPHH6IBlnQdFfdtiwKsR","name":"æ±äº¬ä¸å¤ªç±"},"artists":[{"name":"é¹ä¿å¥","id":"4znIyzBuUopSUzM85E3eFz"}],"album":{"name":"æ±äº¬ä¸å¤ªç±","id":"2OoYGCtUagUn8eVgpn7nof"}},"deezer":{"track":{"id":"1742458127","name":"æ±äº¬ä¸å¤ªç±"},"artists":[{"name":"é¹ä¿å¥","id":"168755187"}],"album":{"name":"æ±äº¬ä¸å¤ªç±","id":"316407027"}}},"play_offset_ms":24300,"result_from":1,"external_ids":{"upc":"0196863808317","isrc":"QZHN82296303"},"title":"æ±äº¬ä¸å¤ªç±","label":"3912456 Records DK","album":{"name":"æ±äº¬ä¸å¤ªç±"},"release_date":"2014-01-01","genres":[{"name":"Pop","id":132}],"acrid":"f29195dea9386b10a6d20a0dee2475f2","artists":[{"name":"é¹ä¿å¥"}]},{"score":100,"duration_ms":228000,"db_begin_time_offset_ms":13600,"db_end_time_offset_ms":23000,"release_date":"2023-03-27","external_metadata":{"deezer":{"track":{"id":"2604864072","name":"ä¸äº¬ä¸å¤ªç­"},"artists":[{"id":"110015772","name":"è¤æå","langs":[{"code":"zh-hant","name":"è¤æå"}]}],"album":{"name":"ä¸äº¬ä¸å¤ªç­","id":"529885002"}}},"play_offset_ms":24920,"result_from":1,"external_ids":{"upc":"6942360839804","isrc":"HKD012206331"},"sample_begin_time_offset_ms":0,"title":"ä¸äº¬ä¸å¤ªç­","album":{"name":"ä¸äº¬ä¸å¤ªç­"},"label":"TME","sample_end_time_offset_ms":9400,"genres":[{"name":"Pop","id":132}],"acrid":"d346b1efed1e04496309bbf10544bf94","artists":[{"name":"è¤æå"}]},{"score":100,"duration_ms":228000,"db_begin_time_offset_ms":12740,"db_end_time_offset_ms":21880,"release_date":"2015-01-01","external_metadata":{"youtube":{"vid":"wmZdtEA2HpA"}},"play_offset_ms":24260,"result_from":1,"external_ids":{},"sample_end_time_offset_ms":9140,"title":"ä¸äº¬ä¸å¤ªç­","album":{"name":"ç­é¨åè¯­269"},"sample_begin_time_offset_ms":0,"acrid":"14d9ff6459c06990781e1f13f2abc5cc","artists":[{"name":"åè¯"}]}]}}
+
+2025-02-01 00:43:39,816 - song_matcher - INFO - 找到匹配歌曲: æ±äº¬ä¸å¤ªç± - é¹ä¿å¥ (置信度: 100%)
+2025-02-01 00:43:39,816 - song_matcher - INFO - 找到匹配歌曲: ä¸äº¬ä¸å¤ªç­ - è¤æå (置信度: 100%)
+2025-02-01 00:43:39,816 - song_matcher - INFO - 找到匹配歌曲: ä¸äº¬ä¸å¤ªç­ - åè¯ (置信度: 100%)
+2025-02-01 00:43:39,817 - song_matcher - INFO - 第 2 个片段识别到 3 首歌曲
+2025-02-01 00:43:40,817 - song_matcher - INFO - 正在处理第 3/22 个片段 (长度: 15.0秒)
+2025-02-01 00:43:44,729 - song_matcher - INFO - 请求数据: {'access_key': '1ca80e9a45eb6ad121ba854109851046', 'sample_bytes': 480044, 'timestamp': '1738341820', 'signature': 'znD2Y4ekTEJuUf/nH8EmExmFSXc=', 'data_type': 'audio', 'signature_version': '1'}
+2025-02-01 00:43:44,729 - song_matcher - INFO - 签名字符串: POST
+/v1/identify
+1ca80e9a45eb6ad121ba854109851046
+audio
+1
+1738341820
+2025-02-01 00:43:44,730 - song_matcher - INFO - 响应状态码: 200
+2025-02-01 00:43:44,731 - song_matcher - INFO - 响应内容: {"cost_time":3.6090002059937,"result_type":0,"status":{"msg":"Success","code":0,"version":"1.0"},"metadata":{"timestamp_utc":"2025-01-31 16:43:44","music":[{"score":94,"duration_ms":228000,"db_begin_time_offset_ms":22340,"db_end_time_offset_ms":33640,"release_date":"2014-12-31","external_metadata":{},"play_offset_ms":34260,"result_from":1,"external_ids":{},"artists":[{"name":"CiDRE"}],"title":"ä¸äº¬ä¸å¤ªç­(æ¥è¯­ç)","album":{"name":"ææ°ç­æ­æ¢æ100"},"sample_end_time_offset_ms":11300,"sample_begin_time_offset_ms":0,"acrid":"c51b236cb0f941794b53101fe37fe22d"},{"score":94,"duration_ms":228000,"db_begin_time_offset_ms":23000,"db_end_time_offset_ms":32780,"release_date":"2014-01-01","external_metadata":{},"play_offset_ms":34920,"result_from":1,"external_ids":{},"artists":[{"name":"ç«ç«ææ¨"}],"title":"ä¸äº¬ä¸å¤ªç­ ","album":{"name":"ç­é¨åè¯­266"},"sample_end_time_offset_ms":9780,"sample_begin_time_offset_ms":0,"acrid":"81a51a978812c52c336e63fcb913e80e"},{"score":82,"duration_ms":234000,"db_begin_time_offset_ms":23100,"db_end_time_offset_ms":34400,"release_date":"2015-12-16","external_metadata":{},"play_offset_ms":35020,"result_from":1,"external_ids":{},"artists":[{"name":"BÃ i Cá»t"}],"title":"Anh áº¤y KhÃ´ng Xem GV","album":{"name":"Anh áº¤y KhÃ´ng Xem GV"},"sample_end_time_offset_ms":11300,"sample_begin_time_offset_ms":0,"acrid":"21c4891a3bc0a6acc3686139ba77554c"}]}}
+
+2025-02-01 00:43:44,731 - song_matcher - INFO - 找到匹配歌曲: ä¸äº¬ä¸å¤ªç­(æ¥è¯­ç) - CiDRE (置信度: 94%)
+2025-02-01 00:43:44,731 - song_matcher - INFO - 找到匹配歌曲: ä¸äº¬ä¸å¤ªç­  - ç«ç«ææ¨ (置信度: 94%)
+2025-02-01 00:43:44,732 - song_matcher - INFO - 找到匹配歌曲: Anh áº¤y KhÃ´ng Xem GV - BÃ i Cá»t (置信度: 82%)
+2025-02-01 00:43:44,732 - song_matcher - INFO - 第 3 个片段识别到 3 首歌曲
+2025-02-01 00:43:45,733 - song_matcher - INFO - 正在处理第 4/22 个片段 (长度: 15.0秒)
+2025-02-01 00:43:48,802 - song_matcher - INFO - 请求数据: {'access_key': '1ca80e9a45eb6ad121ba854109851046', 'sample_bytes': 480044, 'timestamp': '1738341825', 'signature': 'x4OU6w+vY+n4LoniuJ2EsF1t33U=', 'data_type': 'audio', 'signature_version': '1'}
+2025-02-01 00:43:48,802 - song_matcher - INFO - 签名字符串: POST
+/v1/identify
+1ca80e9a45eb6ad121ba854109851046
+audio
+1
+1738341825
+2025-02-01 00:43:48,803 - song_matcher - INFO - 响应状态码: 200
+2025-02-01 00:43:48,803 - song_matcher - INFO - 响应内容: {"cost_time":2.7739999294281,"result_type":0,"status":{"msg":"Success","code":0,"version":"1.0"},"metadata":{"timestamp_utc":"2025-01-31 16:43:48","music":[{"score":40,"duration_ms":312084,"db_begin_time_offset_ms":52460,"db_end_time_offset_ms":57960,"release_date":"2022-07-14","external_metadata":{"deezer":{"track":{"id":"1811220217","name":"Makandauko Aka"},"artists":[{"name":"Y COAST","id":"175239477"}],"album":{"name":"Mabelenge","id":"332280987"}},"spotify":{"track":{"id":"2SPlgq6qieBYAGOoDRoDvF","name":"Makandauko Aka"},"artists":[{"name":"Y COAST","id":"7tXnt9oa8l0YOZoHAf1eX2"}],"album":{"name":"Mabelenge","id":"4O8lVO8ZxcVyLGnWkdjjqr"}},"youtube":{"vid":"Dw-8Q9D5pv8"}},"play_offset_ms":60900,"result_from":3,"external_ids":{"isrc":"SE6SA2273588"},"sample_end_time_offset_ms":8960,"title":"Makandauko Aka","album":{"name":"Mabelenge"},"sample_begin_time_offset_ms":3460,"acrid":"4bce572addc1a354159e33c4466a7dab","artists":[{"name":"Y COAST"}]}]}}
+
+2025-02-01 00:43:48,804 - song_matcher - INFO - 第 4 个片段未识别到歌曲
+2025-02-01 00:43:49,805 - song_matcher - INFO - 正在处理第 5/22 个片段 (长度: 15.0秒)
+2025-02-01 00:43:54,178 - song_matcher - INFO - 请求数据: {'access_key': '1ca80e9a45eb6ad121ba854109851046', 'sample_bytes': 480044, 'timestamp': '1738341829', 'signature': 'Ft1XxQnPz8BDmg2NlyxjiuJ4w64=', 'data_type': 'audio', 'signature_version': '1'}
+2025-02-01 00:43:54,178 - song_matcher - INFO - 签名字符串: POST
+/v1/identify
+1ca80e9a45eb6ad121ba854109851046
+audio
+1
+1738341829
+2025-02-01 00:43:54,179 - song_matcher - INFO - 响应状态码: 200
+2025-02-01 00:43:54,179 - song_matcher - INFO - 响应内容: {"cost_time":3.8870000839233,"result_type":0,"status":{"msg":"Success","code":0,"version":"1.0"},"metadata":{"timestamp_utc":"2025-01-31 16:43:53","music":[{"score":73,"duration_ms":228000,"db_begin_time_offset_ms":89960,"db_end_time_offset_ms":98100,"release_date":"2014-01-01","external_metadata":{},"play_offset_ms":101040,"result_from":1,"external_ids":{},"artists":[{"name":"ç«ç«ææ¨"}],"title":"ä¸äº¬ä¸å¤ªç­ ","album":{"name":"ç­é¨åè¯­266"},"sample_end_time_offset_ms":9040,"sample_begin_time_offset_ms":0,"acrid":"81a51a978812c52c336e63fcb913e80e"},{"score":58,"duration_ms":234000,"db_begin_time_offset_ms":43240,"db_end_time_offset_ms":55000,"release_date":"2015-12-16","external_metadata":{},"play_offset_ms":54980,"result_from":1,"external_ids":{},"artists":[{"name":"BÃ i Cá»t"}],"title":"Anh áº¤y KhÃ´ng Xem GV","album":{"name":"Anh áº¤y KhÃ´ng Xem GV"},"sample_end_time_offset_ms":12000,"sample_begin_time_offset_ms":0,"acrid":"21c4891a3bc0a6acc3686139ba77554c"},{"score":49,"duration_ms":228000,"db_begin_time_offset_ms":104600,"db_end_time_offset_ms":116400,"release_date":"2023-03-27","external_metadata":{"deezer":{"track":{"id":"2604864072","name":"ä¸äº¬ä¸å¤ªç­"},"artists":[{"id":"110015772","name":"è¤æå","langs":[{"code":"zh-hant","name":"è¤æå"}]}],"album":{"name":"ä¸äº¬ä¸å¤ªç­","id":"529885002"}}},"play_offset_ms":116380,"result_from":1,"external_ids":{"upc":"6942360839804","isrc":"HKD012206331"},"sample_begin_time_offset_ms":0,"title":"ä¸äº¬ä¸å¤ªç­","album":{"name":"ä¸äº¬ä¸å¤ªç­"},"label":"TME","sample_end_time_offset_ms":12000,"genres":[{"name":"Pop","id":132}],"acrid":"d346b1efed1e04496309bbf10544bf94","artists":[{"name":"è¤æå"}]}]}}
+
+2025-02-01 00:43:54,180 - song_matcher - INFO - 找到匹配歌曲: ä¸äº¬ä¸å¤ªç­  - ç«ç«ææ¨ (置信度: 73%)
+2025-02-01 00:43:54,180 - song_matcher - INFO - 找到匹配歌曲: Anh áº¤y KhÃ´ng Xem GV - BÃ i Cá»t (置信度: 58%)
+2025-02-01 00:43:54,180 - song_matcher - INFO - 第 5 个片段识别到 2 首歌曲
+2025-02-01 00:43:55,182 - song_matcher - INFO - 正在处理第 6/22 个片段 (长度: 15.0秒)
+2025-02-01 00:44:00,410 - song_matcher - INFO - 请求数据: {'access_key': '1ca80e9a45eb6ad121ba854109851046', 'sample_bytes': 480044, 'timestamp': '1738341835', 'signature': 'VvCKELfBjDWytoQq/hmLlOaDSIw=', 'data_type': 'audio', 'signature_version': '1'}
+2025-02-01 00:44:00,410 - song_matcher - INFO - 签名字符串: POST
+/v1/identify
+1ca80e9a45eb6ad121ba854109851046
+audio
+1
+1738341835
+2025-02-01 00:44:00,411 - song_matcher - INFO - 响应状态码: 200
+2025-02-01 00:44:00,411 - song_matcher - INFO - 响应内容: {"cost_time":4.8900001049042,"result_type":0,"status":{"msg":"Success","code":0,"version":"1.0"},"metadata":{"timestamp_utc":"2025-01-31 16:43:59","music":[{"score":64,"duration_ms":228000,"db_begin_time_offset_ms":53200,"db_end_time_offset_ms":64960,"release_date":"2023-03-27","external_metadata":{"deezer":{"track":{"id":"2604864072","name":"ä¸äº¬ä¸å¤ªç­"},"artists":[{"id":"110015772","name":"è¤æå","langs":[{"code":"zh-hant","name":"è¤æå"}]}],"album":{"name":"ä¸äº¬ä¸å¤ªç­","id":"529885002"}}},"play_offset_ms":64960,"result_from":1,"external_ids":{"upc":"6942360839804","isrc":"HKD012206331"},"sample_begin_time_offset_ms":0,"title":"ä¸äº¬ä¸å¤ªç­","album":{"name":"ä¸äº¬ä¸å¤ªç­"},"label":"TME","sample_end_time_offset_ms":12000,"genres":[{"name":"Pop","id":132}],"acrid":"d346b1efed1e04496309bbf10544bf94","artists":[{"name":"è¤æå"}]},{"score":46,"duration_ms":228000,"db_begin_time_offset_ms":53460,"db_end_time_offset_ms":64980,"release_date":"2014-01-01","external_metadata":{},"play_offset_ms":64980,"result_from":1,"external_ids":{},"artists":[{"name":"ç«ç«ææ¨"}],"title":"ä¸äº¬ä¸å¤ªç­ ","album":{"name":"ç­é¨åè¯­266"},"sample_end_time_offset_ms":12000,"sample_begin_time_offset_ms":0,"acrid":"81a51a978812c52c336e63fcb913e80e"},{"score":40,"duration_ms":228000,"db_begin_time_offset_ms":52840,"db_end_time_offset_ms":64320,"release_date":"2015-01-01","external_metadata":{"youtube":{"vid":"wmZdtEA2HpA"}},"play_offset_ms":64320,"result_from":1,"external_ids":{},"sample_end_time_offset_ms":12000,"title":"ä¸äº¬ä¸å¤ªç­","album":{"name":"ç­é¨åè¯­269"},"sample_begin_time_offset_ms":0,"acrid":"14d9ff6459c06990781e1f13f2abc5cc","artists":[{"name":"åè¯"}]}]}}
+
+2025-02-01 00:44:00,412 - song_matcher - INFO - 找到匹配歌曲: ä¸äº¬ä¸å¤ªç­ - è¤æå (置信度: 64%)
+2025-02-01 00:44:00,412 - song_matcher - INFO - 第 6 个片段识别到 1 首歌曲
+2025-02-01 00:44:01,413 - song_matcher - INFO - 正在处理第 7/22 个片段 (长度: 15.0秒)
+2025-02-01 00:44:05,871 - song_matcher - INFO - 请求数据: {'access_key': '1ca80e9a45eb6ad121ba854109851046', 'sample_bytes': 480044, 'timestamp': '1738341841', 'signature': 'c6FVSfFWG4qi7UWyF0i57J5FBGQ=', 'data_type': 'audio', 'signature_version': '1'}
+2025-02-01 00:44:05,871 - song_matcher - INFO - 签名字符串: POST
+/v1/identify
+1ca80e9a45eb6ad121ba854109851046
+audio
+1
+1738341841
+2025-02-01 00:44:05,872 - song_matcher - INFO - 响应状态码: 200
+2025-02-01 00:44:05,872 - song_matcher - INFO - 响应内容: {"cost_time":4.1160001754761,"result_type":0,"status":{"msg":"Success","code":0,"version":"1.0"},"metadata":{"timestamp_utc":"2025-01-31 16:44:05","music":[{"score":100,"duration_ms":228000,"db_begin_time_offset_ms":64560,"db_end_time_offset_ms":73820,"release_date":"2014-01-01","external_metadata":{},"play_offset_ms":74900,"result_from":1,"external_ids":{},"artists":[{"name":"ç«ç«ææ¨"}],"title":"ä¸äº¬ä¸å¤ªç­ ","album":{"name":"ç­é¨åè¯­266"},"sample_end_time_offset_ms":10880,"sample_begin_time_offset_ms":1620,"acrid":"81a51a978812c52c336e63fcb913e80e"},{"score":100,"duration_ms":228000,"db_begin_time_offset_ms":63680,"db_end_time_offset_ms":73160,"release_date":"2015-01-01","external_metadata":{"youtube":{"vid":"wmZdtEA2HpA"}},"play_offset_ms":74240,"result_from":1,"external_ids":{},"sample_end_time_offset_ms":10880,"title":"ä¸äº¬ä¸å¤ªç­","album":{"name":"ç­é¨åè¯­269"},"sample_begin_time_offset_ms":1400,"acrid":"14d9ff6459c06990781e1f13f2abc5cc","artists":[{"name":"åè¯"}]},{"score":100,"duration_ms":228000,"db_begin_time_offset_ms":64320,"label":"ç¬ç«åè¡","release_date":"2015-04-24","external_metadata":{"youtube":{"vid":"UBjkRtDKuoM"}},"play_offset_ms":74880,"result_from":1,"external_ids":{},"sample_end_time_offset_ms":10700,"artists":[{"name":"æ´å¤©ä¾"}],"album":{"name":"ä¸äº¬ä¸å¤ªç­"},"title":"ä¸äº¬ä¸å¤ªç­","sample_begin_time_offset_ms":1400,"db_end_time_offset_ms":73620,"acrid":"464964f1b6d5fa37b8004cc3f083ebc1"}]}}
+
+2025-02-01 00:44:05,873 - song_matcher - INFO - 找到匹配歌曲: ä¸äº¬ä¸å¤ªç­  - ç«ç«ææ¨ (置信度: 100%)
+2025-02-01 00:44:05,873 - song_matcher - INFO - 找到匹配歌曲: ä¸äº¬ä¸å¤ªç­ - åè¯ (置信度: 100%)
+2025-02-01 00:44:05,873 - song_matcher - INFO - 找到匹配歌曲: ä¸äº¬ä¸å¤ªç­ - æ´å¤©ä¾ (置信度: 100%)
+2025-02-01 00:44:05,873 - song_matcher - INFO - 第 7 个片段识别到 3 首歌曲
+2025-02-01 00:44:06,874 - song_matcher - INFO - 正在处理第 8/22 个片段 (长度: 15.0秒)

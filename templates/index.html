@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>B站视频音频分离</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary-color: #00a1d6;
+            --hover-color: #0091c2;
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --border-radius: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0,161,214,0.2);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--hover-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #eee;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-bar-inner {
+            width: 0%;
+            height: 100%;
+            background-color: var(--primary-color);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .status {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 12px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            display: none;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .result {
+            margin-top: 30px;
+            display: none;
+            animation: slideDown 0.5s ease-out;
+        }
+
+        .file-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+
+        .file-item:hover {
+            transform: translateX(5px);
+            background-color: #f0f0f0;
+        }
+
+        .file-item a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .file-item a:hover {
+            text-decoration: underline;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        @keyframes slideDown {
+            from { 
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>B站视频音频分离</h1>
+        <div class="form-group">
+            <label for="url">请输入B站视频链接：</label>
+            <input type="text" id="url" 
+                   placeholder="例如：https://www.bilibili.com/video/BVxxxxxx" 
+                   onkeydown="if(event.keyCode==13) processVideo()">
+        </div>
+        <button id="processBtn" onclick="processVideo()">开始处理</button>
+        
+        <div class="progress" id="progress">
+            <p>正在处理中，请稍候...</p>
+            <div class="progress-bar">
+                <div class="progress-bar-inner" id="progressBar"></div>
+            </div>
+            <p class="status" id="status">准备下载...</p>
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="result" id="result">
+            <h3>处理完成！</h3>
+            <div class="file-item">
+                <span>原始视频</span>
+                <a id="videoFile" href="#" target="_blank" download></a>
+            </div>
+            <div class="file-item">
+                <span>原始音频</span>
+                <a id="originalAudio" href="#" target="_blank" download></a>
+            </div>
+            <div class="file-item">
+                <span>人声文件</span>
+                <a id="vocalsAudio" href="#" target="_blank" download></a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let processingTimeout;
+
+        async function processVideo() {
+            const url = document.getElementById('url').value;
+            const processBtn = document.getElementById('processBtn');
+            
+            if (!url) {
+                showError('请输入视频链接');
+                return;
+            }
+
+            // 禁用按钮
+            processBtn.disabled = true;
+            processBtn.textContent = '处理中...';
+            
+            // 显示进度提示
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('result').style.display = 'none';
+            
+            // 模拟进度
+            let progress = 0;
+            processingTimeout = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.random() * 10;
+                    updateProgress(Math.min(progress, 90));
+                }
+            }, 1000);
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    clearInterval(processingTimeout);
+                    updateProgress(100);
+                    updateStatus('处理完成！');
+                    
+                    // 显示文件链接
+                    document.getElementById('videoFile').href = data.video_file;
+                    document.getElementById('videoFile').textContent = data.video_file.split('/').pop();
+                    document.getElementById('originalAudio').href = data.original_audio;
+                    document.getElementById('originalAudio').textContent = data.original_audio.split('/').pop();
+                    document.getElementById('vocalsAudio').href = data.vocals_audio;
+                    document.getElementById('vocalsAudio').textContent = data.vocals_audio.split('/').pop();
+                    document.getElementById('result').style.display = 'block';
+                } else {
+                    showError(data.error || '处理失败');
+                }
+            } catch (error) {
+                showError('请求失败：' + error.message);
+            } finally {
+                clearInterval(processingTimeout);
+                processBtn.disabled = false;
+                processBtn.textContent = '开始处理';
+                setTimeout(() => {
+                    document.getElementById('progress').style.display = 'none';
+                }, 1000);
+            }
+        }
+
+        function showError(message) {
+            const error = document.getElementById('error');
+            error.textContent = message;
+            error.style.display = 'block';
+            error.style.animation = 'none';
+            error.offsetHeight; // 触发重绘
+            error.style.animation = 'shake 0.5s ease-in-out';
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+    </script>
+</body>
+</html> 
