@@ -1,7 +1,0 @@
-yt-dlp
-pydub
-librosa
-numpy
-scipy
-fastdtw
-requests 

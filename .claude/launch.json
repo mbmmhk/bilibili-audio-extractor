@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "songline",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd backend && PATH=$HOME/.local/songline-tools/bin:$PATH SONGLINE_DATA=${SONGLINE_DATA:-$HOME/.songline} uv run songline serve --no-open --port 8765"],
+      "port": 8765
+    }
+  ]
+}
