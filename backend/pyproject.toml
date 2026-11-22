@@ -11,6 +11,7 @@ dependencies = [
     "mlx-whisper>=0.4.3",
     "opencc-python-reimplemented>=0.1.7",
     "pydantic>=2",
+    "pypinyin>=0.55.0",
     "rapidfuzz>=3.14.6",
     "rich>=15.0.0",
     "shazamio>=0.9.0",

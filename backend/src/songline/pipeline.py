@@ -84,7 +84,7 @@ async def run(job: Job, ctx: Context) -> Job:
 
     # 3. Transcribe in chunks; match lyrics incrementally so results stream in.
     client = NeteaseClient(ctx.cache)
-    matcher = Matcher(client)
+    matcher = Matcher(client, hint=f"{job.video.title} {job.video.owner}")
     seg_cache = audio_path.with_suffix(".segments.json")
     segments: list[Segment] = []
     try:

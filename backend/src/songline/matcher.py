@@ -19,14 +19,16 @@ The matcher is incremental: call `feed()` as transcript chunks arrive and
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import re
 from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz
 
 from .lyrics import Candidate, NeteaseClient
 from .models import Segment, SongRef, TimelineEntry
-from .text import clean_title, is_hallucination, norm, title_key
+from .text import clean_title, is_hallucination, norm, pinyin, title_key
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +43,8 @@ MERGE_GAP = 75.0  # same song resumes after a chat break shorter than this
 RECENT_POOL = 6
 MIN_ENTRY_CHARS = 14  # an entry must rest on more than one short line
 POOL_SLACK = 0.08  # candidates this close to the best are "the same song" votes
+PY_MATCH = 80  # pinyin partial_ratio for a homophone-tolerant line match
+PY_MIN_LEN = 12  # pinyin is less distinctive; only trust it on longer lines
 
 
 @dataclass
@@ -99,19 +103,31 @@ def clean_segments(segments: list[Segment]) -> list[_Line]:
 
 class _Scorer:
     def __init__(self) -> None:
-        self._joined: dict[int, str] = {}
+        self._joined: dict[int, tuple[str, str]] = {}
+
+    def hit(self, ln: _Line, cand: Candidate) -> bool:
+        """Is this transcript line (fuzzily) part of the candidate's lyrics?"""
+        if len(ln.n) < MIN_LINE_CHARS:
+            return False
+        joined = self._joined.get(cand.id)
+        if joined is None:
+            lyric = "|".join(cand.lyric_lines)
+            joined = self._joined[cand.id] = (lyric, "|".join(pinyin(l) for l in cand.lyric_lines))
+        if fuzz.partial_ratio(ln.n, joined[0]) >= LINE_MATCH:
+            return True
+        # Fall back to sound: Whisper often picks the wrong homophone, which
+        # wrecks character matching on classical-style lyrics.
+        py = pinyin(ln.n)
+        return len(py) >= PY_MIN_LEN and fuzz.partial_ratio(py, joined[1]) >= PY_MATCH
 
     def score(self, lines: list[_Line], cand: Candidate) -> tuple[float, list[_Line]]:
-        lyric = self._joined.get(cand.id)
-        if lyric is None:
-            lyric = self._joined[cand.id] = "|".join(cand.lyric_lines)
         total = matched_chars = 0
         matched: list[_Line] = []
         for ln in lines:
             if len(ln.n) < MIN_LINE_CHARS:
                 continue
             total += len(ln.n)
-            if fuzz.partial_ratio(ln.n, lyric) >= LINE_MATCH:
+            if self.hit(ln, cand):
                 matched_chars += len(ln.n)
                 matched.append(ln)
         if total < MIN_WINDOW_CHARS:
@@ -119,18 +135,35 @@ class _Scorer:
         return matched_chars / total, matched
 
 
-def _query_for(lines: list[_Line]) -> str | None:
-    usable = sorted({ln.n for ln in lines if len(ln.n) >= 5}, key=len, reverse=True)
-    if not usable:
-        return None
-    # Two longest distinct lines; NetEase handles space-separated fragments well.
-    q = " ".join(usable[:2])
-    return q[:40]
+# Words far more common in streamer chat than in lyrics.
+_CHAT = re.compile(
+    r"你们|谢谢|哈哈|然后|就是|感觉|因为|可能|这个|那个|宝宝|直播|关注|礼物|欢迎|一下|什么|是不是|没有啊|好吧|对吧|主要|刚才|今天"
+)
+MAX_QUERIES = 3
+
+
+def _queries_for(lines: list[_Line]) -> list[str]:
+    """Several single-line queries, most lyric-like first.
+
+    One garbled or chatty line used to spoil a combined query; searching lines
+    separately lets any clean lyric line find the song.
+    """
+
+    def rank(n: str) -> float:
+        # Long lines are informative, but very long ones are usually merged
+        # chat or ASR soup, so length stops helping past 14 chars.
+        return min(len(n), 14) - 5 * len(_CHAT.findall(n))
+
+    usable = {ln.n for ln in lines if len(ln.n) >= 6} or {ln.n for ln in lines if len(ln.n) >= 5}
+    ordered = sorted(usable, key=lambda n: (rank(n), len(n)), reverse=True)
+    return [n[:30] for n in ordered if rank(n) > 0][:MAX_QUERIES]
 
 
 class Matcher:
-    def __init__(self, client: NeteaseClient):
+    def __init__(self, client: NeteaseClient, hint: str = ""):
+        """`hint`: video title / uploader, used to credit a streamer's own songs."""
         self._client = client
+        self._hint = hint
         self._scorer = _Scorer()
         self._cleaner = _Cleaner()
         self._windows: list[_Window] = []
@@ -170,10 +203,11 @@ class Matcher:
             return w
 
         # 2) Search by lyrics.
-        q = _query_for(lines)
-        if not q:
+        queries = _queries_for(lines)
+        if not queries:
             return w
-        cands = await self._client.search_lyrics(q)
+        found = await asyncio.gather(*(self._client.search_lyrics(q) for q in queries))
+        cands = list({c.id: c for batch in found for c in batch}.values())
         ranked = sorted(
             ((c, *self._scorer.score(lines, c)) for c in cands), key=lambda x: x[1], reverse=True
         )
@@ -213,16 +247,31 @@ class Matcher:
                     continue
             runs.append([w])
 
-        entries: list[TimelineEntry] = []
+        # Runs can break where near-best titles briefly disagree ("帽衫" vs
+        # "你好我有一个帽衫"); rejoin neighbours that voted for the same song.
+        runs = [r for r in runs if sum(len(l.n) for l in _core(r)) >= MIN_ENTRY_CHARS]
+        joined: list[list[_Window]] = []
         for run in runs:
-            cand = _vote(run)
-            matched = self._grow(run, cand)
+            if joined and _same_song(_vote(joined[-1]).key, _vote(run).key):
+                gap = _core(run)[0].start - _core(joined[-1])[-1].end
+                if gap <= MERGE_GAP:
+                    joined[-1] = joined[-1] + run
+                    continue
+            joined.append(run)
+        runs = joined
+        cands = [_vote(run) for run in runs]
+        cores = [_core(run) for run in runs]
+
+        entries: list[TimelineEntry] = []
+        for i, (run, cand) in enumerate(zip(runs, cands)):
+            matched = self._grow(cores[i], cand)
             if sum(len(l.n) for l in matched) < MIN_ENTRY_CHARS:
                 continue
             mean = sum(w.score for w in run) / len(run)
             conf = mean * (1 - 0.5 ** len(run))  # 1 window -> x0.5, 2 -> x0.75, 3 -> x0.875
-            canon = await self._client.canonical(cand.title)
-            if canon and not _lyric_titled(canon[0], cand):
+            sung = sorted({l.n for l in matched}, key=len, reverse=True)[:12]
+            canon = await self._client.canonical(cand.title, sung, self._hint)
+            if canon:
                 song = SongRef(title=canon[0], artist=canon[1], netease_id=canon[2])
             else:
                 song = SongRef(title=clean_title(cand.title), artist=cand.artist, netease_id=cand.id)
@@ -241,24 +290,20 @@ class Matcher:
             entries.append(entry)
         return _dedupe_overlaps(entries)
 
-    def _grow(self, run: list[_Window], cand: Candidate) -> list[_Line]:
-        """Matched lines of the run, extended to neighbouring lines that are
+    def _grow(self, core: list[_Line], cand: Candidate) -> list[_Line]:
+        """Core lines extended to neighbouring lines that are
         also in this song's lyrics (window edges cut songs short)."""
-        core = sorted({id(l): l for w in run for l in w.matched}.values(), key=lambda l: l.start)
         if not core:
             return core
-        lyric = "|".join(cand.lyric_lines)
-        ok = lambda l: len(l.n) >= MIN_LINE_CHARS and fuzz.partial_ratio(l.n, lyric) >= LINE_MATCH
         idx = {id(l): i for i, l in enumerate(self._lines)}
-        lo, hi = idx[id(core[0])], idx[id(core[-1])]
         out = list(core)
-        for step, bound in ((-1, lo), (1, hi)):
+        for step, bound in ((-1, idx[id(core[0])]), (1, idx[id(core[-1])])):
             i, edge = bound + step, self._lines[bound]
             while 0 <= i < len(self._lines):
                 l = self._lines[i]
                 if abs(l.start - edge.start) > 45:
                     break
-                if ok(l):
+                if self._scorer.hit(l, cand):
                     out.append(l)
                     edge = l
                 i += step
@@ -275,6 +320,16 @@ class Matcher:
         if key in near and near.count(key) > sung.count(key):
             e.sources.append("spoken")
             e.confidence = round(min(1.0, e.confidence + 0.2), 3)
+
+
+def _same_song(a: str, b: str) -> bool:
+    """"帽衫" / "你好我有一个帽衫", "谁家" / "谁家-赤热": one title contains the other."""
+    short, long_ = sorted((a, b), key=len)
+    return a == b or (len(short) >= 2 and short in long_ and len(short) / len(long_) >= 0.25)
+
+
+def _core(run: list[_Window]) -> list[_Line]:
+    return sorted({id(l): l for w in run for l in w.matched}.values(), key=lambda l: l.start)
 
 
 def _lyric_titled(title: str, cand: Candidate) -> bool:
@@ -295,7 +350,14 @@ def _vote(run: list[_Window]) -> Candidate:
             votes[c.key] = votes.get(c.key, 0) + weight
             if c.key not in best or weight > best[c.key][0]:
                 best[c.key] = (weight, c)
-    key = max(votes, key=votes.get)
+    # "魔术手-陈振祥 伴奏", "周传雄-寂寞沙洲冷", "谁家-赤热" are the same song as
+    # the plain title: credit their votes to the shorter key they contain.
+    merged = dict(votes)
+    for k, v in votes.items():
+        for short in votes:
+            if short != k and len(short) < len(k) and _same_song(short, k):
+                merged[short] += v
+    key = max(merged, key=lambda k: (merged[k], -len(k)))
     return best[key][1]
 
 

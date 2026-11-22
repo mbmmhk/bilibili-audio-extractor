@@ -90,7 +90,8 @@ def download_audio(
 ) -> Path:
     """Download the audio-only stream (no video, no re-encode). Blocking."""
     stem = f"{video.bvid}_p{video.page}"
-    existing = [p for p in dest_dir.glob(f"{stem}.*") if p.suffix not in (".part", ".ytdl")]
+    # Only the audio itself: "{stem}.segments.json" (cached transcript) shares the stem.
+    existing = [p for p in dest_dir.glob(f"{stem}.*") if p.suffix not in (".part", ".ytdl", ".json")]
     if existing:
         return existing[0]
 

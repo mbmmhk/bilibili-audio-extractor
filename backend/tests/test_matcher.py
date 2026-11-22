@@ -1,7 +1,7 @@
 import pytest
 
 from songline.lyrics import Candidate
-from songline.matcher import Matcher, clean_segments
+from songline.matcher import MAX_QUERIES, Matcher, clean_segments
 from songline.models import Segment
 from songline.text import norm, title_key
 
@@ -24,7 +24,7 @@ class FakeClient:
         q = norm(query)
         return [c for c in self.songs.values() if any(q[:6] in l or l in q for l in c.lyric_lines)]
 
-    async def canonical(self, title):
+    async def canonical(self, title, sung=None, prefer=""):
         return None
 
 
@@ -74,7 +74,7 @@ async def test_reuses_recent_song_without_searching_again():
     c = FakeClient()
     m = Matcher(c)
     await m.feed(segs(SONG_A * 4, 0), final=True)
-    assert c.searches <= 2
+    assert c.searches <= 2 * MAX_QUERIES  # one search round, maybe two; not one per window
 
 
 @pytest.mark.asyncio
@@ -95,3 +95,47 @@ def test_cleaning_drops_hallucinations_and_loops():
 )
 def test_title_key_ignores_versions(a, b):
     assert title_key(a) == title_key(b)
+
+
+def test_queries_prefer_lyric_lines_over_chat():
+    from songline.matcher import _Line, _queries_for
+
+    lines = [_Line(0, 1, t, norm(t)) for t in ["我主要是感觉可能是因为之前吃的", "爱一个人要学会放下", "奢望幸福却也要不惜代价"]]
+    qs = _queries_for(lines)
+    assert qs[:2] == [norm("奢望幸福却也要不惜代价"), norm("爱一个人要学会放下")]
+    assert all("感觉" not in q for q in qs)
+
+
+def test_homophone_errors_still_match_by_pinyin():
+    from songline.lyrics import Candidate
+    from songline.matcher import _Line, _Scorer
+
+    cand = Candidate(1, "离人赋", "云汐", [norm("你送的胭脂扣是我的心头"), norm("在那一夜缠绵后")])
+    heard = norm("你送的胭脂口是我的新头")  # what Whisper wrote
+    assert _Scorer().hit(_Line(0, 1, heard, heard), cand)
+    chat = norm("今天吃的火锅特别好吃")
+    assert not _Scorer().hit(_Line(0, 1, chat, chat), cand)
+
+
+def test_vote_merges_title_variants():
+    from songline.lyrics import Candidate
+    from songline.matcher import _vote, _Window
+
+    lyr = [norm(l) for l in SONG_A]
+    a = Candidate(1, "魔术手-陈振祥 伴奏", "陈振祥", lyr)
+    b = Candidate(2, "魔术手", "之烨", lyr)
+    c = Candidate(3, "路小雨", "Apr光", lyr)
+    # Each variant alone gets fewer votes than 路小雨; together they win.
+    w1 = _Window(0, [], a, 0.9, pool=[a, c])
+    w2 = _Window(15, [], b, 0.9, pool=[b, c])
+    assert _vote([w1, w2]).title == "魔术手"
+
+
+def test_audio_reuse_ignores_cached_transcript(tmp_path):
+    from songline.bili import download_audio
+    from songline.models import VideoInfo
+
+    (tmp_path / "BV1xx411c7mD_p1.segments.json").write_text("[]")
+    (tmp_path / "BV1xx411c7mD_p1.m4a").write_bytes(b"audio")
+    v = VideoInfo(bvid="BV1xx411c7mD", aid=1, title="t", owner="o", cover="", duration=1, page=1, pages=[], description="")
+    assert download_audio(v, tmp_path).suffix == ".m4a"

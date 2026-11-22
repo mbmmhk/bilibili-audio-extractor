@@ -48,3 +48,11 @@ def title_key(title: str) -> str:
 def clean_title(title: str) -> str:
     t = _VERSION_TAGS.sub("", to_simplified(title)).strip()
     return t or title
+
+
+@lru_cache(maxsize=65536)
+def pinyin(s: str) -> str:
+    """Toneless pinyin, so ASR homophone errors (胭脂扣 -> 胭脂口) still match."""
+    from pypinyin import lazy_pinyin
+
+    return "".join(lazy_pinyin(s))
