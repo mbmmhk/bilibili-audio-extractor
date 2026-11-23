@@ -22,33 +22,102 @@
 
 识别结果会边转写边显示，全部转写完后再整体校正一遍。
 
-## 运行
+## 安装
 
-需要 macOS + Apple Silicon（Whisper 用的是 MLX）。ffmpeg 已经随 Python 依赖一起安装，不需要另外装。
+只支持 **macOS + Apple Silicon**（M1/M2/M3/M4 芯片），因为语音识别用的是 Apple 的 MLX。
 
-```bash
-# 后端（Python 3.12，用 uv 管理）
-cd backend
-uv sync
-uv run songline serve          # 打开 http://127.0.0.1:8765
+### 1. 装好两个工具
 
-# 命令行直接识别
-uv run songline run "https://www.bilibili.com/video/BV1zgWq6eEQT"
-uv run songline run BV1zgWq6eEQT --json --no-shazam
-```
-
-前端开发：
+在「终端」里执行：
 
 ```bash
-cd frontend
-npm install
-npm run dev      # http://localhost:5173 ，/api 会代理到 8765 端口
-npm run build    # 生成 dist/，由后端在 / 路径直接提供
+# uv：管理 Python 和依赖（会自动装好 Python 3.12，不需要自己装 Python）
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Node.js 20.19 以上：只用来构建网页界面
+brew install node
 ```
 
-首次运行会自动下载 Whisper 模型（约 1.6 GB）。
+没有 Homebrew 的话，可以从 [nodejs.org](https://nodejs.org) 下载安装包。ffmpeg 不用装，它会随 Python 依赖一起装好。
+
+装完后**重新打开一个终端窗口**，让新命令生效。
+
+### 2. 下载代码并安装
+
+```bash
+git clone git@github.com:mbmmhk/bilibili-audio-extractor.git
+cd bilibili-audio-extractor
+
+# 构建网页界面（只需做一次，前端代码更新后再做）
+cd frontend && npm install && npm run build && cd ..
+
+# 安装后端依赖
+cd backend && uv sync
+```
+
+## 使用
+
+### 网页版（推荐）
+
+```bash
+cd bilibili-audio-extractor/backend
+uv run songline serve
+```
+
+浏览器会自动打开 <http://127.0.0.1:8765>。用完在终端按 `Ctrl+C` 关掉。
+
+1. 把 B 站视频链接粘贴进输入框，点「开始识别」。
+   - 支持完整链接、BV 号、b23.tv 短链，也可以直接粘贴 App 里「分享」复制出来的整段文字。
+   - 多 P 视频：链接里带上 `?p=2` 就识别第 2P。
+2. 「音频指纹交叉核对」默认打开，结果更准，但会多花几分钟；只想快点出结果可以关掉。
+3. 等待识别。认出来的歌会边转写边显示，全部转写完后会整体校正一遍。1 小时的视频大约需要 3～5 分钟。
+4. 看结果：
+   - 点歌名旁边的时间可以从这里播放；点 B 站图标会在 B 站打开到这个时间点。
+   - 「复制时间轴」：复制成文本，可以直接贴到评论区或动态里。
+   - 也可以导出 JSON、下载音频、查看和搜索完整的语音转写。
+5. 左侧（手机上在页面下方）是历史记录。同一个视频再次识别时，会复用已下载的音频和已有的转写，速度快很多。
+
+**第一次运行**会下载 Whisper 语音模型（约 1.6 GB），需要等一会儿，之后就不用再下载了。
+
+### 命令行版
+
+不想开网页，也可以在终端里直接出结果：
+
+```bash
+cd bilibili-audio-extractor/backend
+uv run songline run "https://www.bilibili.com/video/BV1zgWq6eEQT"   # 打印成表格
+uv run songline run BV1zgWq6eEQT --no-shazam                        # 不做指纹核对，更快
+uv run songline run BV1zgWq6eEQT --json > 歌单.json                  # 输出 JSON
+```
+
+### 更新到最新版
+
+```bash
+cd bilibili-audio-extractor
+git pull
+cd frontend && npm install && npm run build && cd ..
+cd backend && uv sync
+```
+
+### 常见问题
+
+- **打开网页是 `{"detail":"Not Found"}`**：网页界面还没构建，先执行上面的 `npm run build`。
+- **提示端口 8765 被占用**：之前的服务还开着。关掉那个终端窗口，或者换个端口：`uv run songline serve --port 8766`。
+- **视频需要登录才能看 / 下载失败**：设置下面的 `SONGLINE_BILI_SESSDATA`。
+- **识别不全或歌名不对**：可以打开「音频指纹交叉核对」再识别一次；纯伴奏、没有歌词的段落本来就很难认出来，见「已知局限」。
+
+### 开发
+
+```bash
+cd frontend && npm run dev            # http://localhost:5173 ，/api 会代理到 8765 端口
+cd backend && uv run pytest           # 跑测试
+```
+
+开发前端时需要同时开着 `uv run songline serve`。
 
 ### 配置（环境变量）
+
+在启动命令前面加上就行，例如 `SONGLINE_DATA=~/songline-data uv run songline serve`。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
