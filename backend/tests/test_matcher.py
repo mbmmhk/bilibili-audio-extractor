@@ -139,3 +139,43 @@ def test_audio_reuse_ignores_cached_transcript(tmp_path):
     (tmp_path / "BV1xx411c7mD_p1.m4a").write_bytes(b"audio")
     v = VideoInfo(bvid="BV1xx411c7mD", aid=1, title="t", owner="o", cover="", duration=1, page=1, pages=[], description="")
     assert download_audio(v, tmp_path).suffix == ".m4a"
+
+
+class ListClient(FakeClient):
+    """Returns the given uploads, in this order, for any matching lyric search."""
+
+    def __init__(self, *cands):
+        self.songs = {c.id: c for c in cands}
+        self.searches = 0
+
+
+@pytest.mark.asyncio
+async def test_reused_windows_still_vote_for_same_lyric_uploads():
+    lyr = [norm(l) for l in SONG_A]
+    c = ListClient(Candidate(1, "路小雨", "Apr光", lyr), Candidate(2, "魔术手", "之烨", lyr), Candidate(3, "魔术手-陈振祥 伴奏", "陈振祥", lyr))
+    m = Matcher(c)
+    await m.feed(segs(SONG_A * 4), final=True)
+    assert [e.song.title for e in await m.timeline()] == ["魔术手"]
+
+
+@pytest.mark.asyncio
+async def test_original_named_after_its_hook_keeps_its_title():
+    lines = ["我多喜欢你你会知道", "我们在一起的时光", "每一天都是晴朗", "就算以后会遗忘"]
+    lyr = [norm(l) for l in lines]
+    c = ListClient(Candidate(1, "我多喜欢你，你会知道", "王俊琪", lyr), Candidate(2, "我好喜欢你你知不知道", "糖火烧", lyr))
+    m = Matcher(c)
+    await m.feed(segs(lines * 4), final=True)
+    assert [e.song.title for e in await m.timeline()] == ["我多喜欢你，你会知道"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("gap_lines,entries", [(["好厉害"], 1), (["谢谢大家的礼物今天好开心呀", "等我喝口水我们聊会儿天"] * 6, 2)])
+async def test_same_song_merges_across_a_quiet_gap_but_not_a_chat_break(gap_lines, entries):
+    # 110s between the two halves: too long for a chat break, fine for
+    # backing music Whisper did not transcribe.
+    first = segs(SONG_B * 2, 0)
+    gap = segs(gap_lines, 40, step=6.0)
+    second = segs(SONG_B * 2, 150)
+    m = Matcher(FakeClient())
+    await m.feed(first + gap + second, final=True)
+    assert [e.song.title for e in await m.timeline()] == ["当初的我们"] * entries

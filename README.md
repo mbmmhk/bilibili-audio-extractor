@@ -113,7 +113,10 @@ cd backend && uv sync
 ```bash
 cd frontend && npm run dev            # http://localhost:5173 ，/api 会代理到 8765 端口
 cd backend && uv run pytest           # 跑测试
+cd backend && uv run python eval/run_eval.py -v   # 用手工核对过的歌单给识别结果打分
 ```
+
+`eval/truth.json` 是三个直播回放的人工核对歌单。评测直接用本机已缓存的转写（`~/.songline/audio`），所以要先用网页版或命令行把这三个视频识别一遍。改匹配逻辑前后各跑一次，就能看出准确率是升了还是降了。
 
 开发前端时需要同时开着 `uv run songline serve`。
 

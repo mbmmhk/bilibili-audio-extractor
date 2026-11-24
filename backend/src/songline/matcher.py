@@ -40,6 +40,8 @@ LINE_MATCH = 72  # partial_ratio needed for a line to count as "in the lyrics"
 ACCEPT = 0.5  # window score needed to assign a song
 REUSE = 0.6  # score needed to keep a recent song without searching again
 MERGE_GAP = 75.0  # same song resumes after a chat break shorter than this
+QUIET_GAP = 180.0  # ... or after a longer stretch where little is said:
+QUIET_RATE = 40  # chars/minute; chat runs at 150+, and Whisper often drops vocals over loud backing
 RECENT_POOL = 6
 MIN_ENTRY_CHARS = 14  # an entry must rest on more than one short line
 POOL_SLACK = 0.08  # candidates this close to the best are "the same song" votes
@@ -65,6 +67,8 @@ class _Window:
     # Near-best candidates: usually the same song uploaded under other titles.
     pool: list[Candidate] = field(default_factory=list)
     runner_up: Candidate | None = None
+    # Every candidate that explains the window well enough (pool included).
+    fits: list[Candidate] = field(default_factory=list)
 
     @property
     def keys(self) -> set[str]:
@@ -196,10 +200,11 @@ class Matcher:
             return w
 
         # 1) Does a song we just heard still explain these lines?
-        best = self._best(lines, self._recent)
-        if best and best[1] >= REUSE:
-            w.cand, w.score, w.matched = best[0], best[1], best[2]
-            w.pool = [c for c in self._recent if c.key == w.cand.key]
+        scored = sorted(
+            ((c, *self._scorer.score(lines, c)) for c in self._recent), key=lambda x: x[1], reverse=True
+        )
+        if scored and scored[0][1] >= REUSE:
+            self._assign(w, scored)
             return w
 
         # 2) Search by lyrics.
@@ -212,17 +217,25 @@ class Matcher:
             ((c, *self._scorer.score(lines, c)) for c in cands), key=lambda x: x[1], reverse=True
         )
         if ranked and ranked[0][1] >= ACCEPT:
-            w.cand, w.score, w.matched = ranked[0]
-            w.pool = [r[0] for r in ranked if r[1] >= w.score - POOL_SLACK]
-            others = [r for r in ranked if r[1] < w.score - POOL_SLACK and r[1] >= ACCEPT]
-            w.runner_up = others[0][0] if others else None
+            self._assign(w, ranked)
             for c in reversed(w.pool):
                 self._remember(c)
         return w
 
-    def _best(self, lines, pool):
-        scored = [(c, *self._scorer.score(lines, c)) for c in pool]
-        return max(scored, key=lambda x: x[1]) if scored else None
+    @staticmethod
+    def _assign(w: _Window, ranked: list) -> None:
+        """Best-first (candidate, score, matched lines) -> the window's song and votes.
+
+        Near-best candidates all vote, also when a recent song is reused:
+        the same lyrics are often uploaded under several titles
+        ("路小雨" / "魔术手"), and the title must not be decided by
+        whichever upload happened to be searched first.
+        """
+        w.cand, w.score, w.matched = ranked[0]
+        w.pool = [r[0] for r in ranked if r[1] >= w.score - POOL_SLACK]
+        w.fits = [r[0] for r in ranked if r[1] >= ACCEPT]
+        others = [r[0] for r in ranked if r[1] < w.score - POOL_SLACK and r[1] >= ACCEPT]
+        w.runner_up = others[0] if others else None
 
     def _remember(self, cand: Candidate) -> None:
         self._recent = [c for c in self._recent if c.key != cand.key]
@@ -253,8 +266,8 @@ class Matcher:
         joined: list[list[_Window]] = []
         for run in runs:
             if joined and _same_song(_vote(joined[-1]).key, _vote(run).key):
-                gap = _core(run)[0].start - _core(joined[-1])[-1].end
-                if gap <= MERGE_GAP:
+                a, b = _core(joined[-1])[-1].end, _core(run)[0].start
+                if b - a <= MERGE_GAP or (b - a <= QUIET_GAP and self._said(a, b, _vote(run)) <= QUIET_RATE * (b - a) / 60):
                     joined[-1] = joined[-1] + run
                     continue
             joined.append(run)
@@ -289,6 +302,10 @@ class Matcher:
             self._apply_spoken_hint(entry)
             entries.append(entry)
         return _dedupe_overlaps(entries)
+
+    def _said(self, a: float, b: float, cand: Candidate) -> int:
+        """Characters spoken between a and b that are not this song's lyrics."""
+        return sum(len(l.n) for l in self._lines if a <= l.start < b and not self._scorer.hit(l, cand))
 
     def _grow(self, core: list[_Line], cand: Candidate) -> list[_Line]:
         """Core lines extended to neighbouring lines that are
@@ -345,7 +362,9 @@ def _vote(run: list[_Window]) -> Candidate:
     for w in run:
         for rank, c in enumerate(w.pool):
             weight = w.score * (1.0 if rank == 0 else 0.8)
-            if _lyric_titled(c.title, c):
+            # Remixes get uploaded under a lyric line; an original can be named
+            # after its own hook too, so trust the search's own top hit.
+            if rank > 0 and _lyric_titled(c.title, c):
                 weight *= 0.3
             votes[c.key] = votes.get(c.key, 0) + weight
             if c.key not in best or weight > best[c.key][0]:
