@@ -1,5 +1,7 @@
 # Songline · B 站歌单时间轴
 
+[![CI](https://github.com/mbmmhk/bilibili-audio-extractor/actions/workflows/ci.yml/badge.svg)](https://github.com/mbmmhk/bilibili-audio-extractor/actions/workflows/ci.yml)
+
 输入一个 B 站视频链接，输出视频里唱了哪些歌、每首在什么时间。适合翻唱、弹唱、直播回放这类视频。
 
 ```
