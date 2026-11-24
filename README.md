@@ -24,9 +24,27 @@
 
 识别结果会边转写边显示，全部转写完后再整体校正一遍。
 
-## 安装
+## 一键安装（推荐）
 
 只支持 **macOS + Apple Silicon**（M1/M2/M3/M4 芯片），因为语音识别用的是 Apple 的 MLX。
+
+打开「终端」（在启动台里搜"终端"），粘贴下面这一行，回车：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mbmmhk/bilibili-audio-extractor/master/install.sh | bash
+```
+
+几分钟后会自动打开网页。之后要用时，**双击桌面上的 `Songline.command`** 就行；用完关掉弹出的终端窗口即可。
+
+- 不需要另外装 Python、Node.js 或 ffmpeg，也不需要管理员密码。
+- 程序装在 `~/Songline`，识别记录存在 `~/.songline`。
+- **更新**：重新运行上面那条命令。历史记录会保留。
+- **卸载**：删掉 `~/Songline`、`~/.songline` 和桌面上的 `Songline.command`。
+- 第一次识别时会下载约 1.6 GB 的语音模型，需要等一会儿。
+
+下面是从源码安装的方法，适合想改代码的人。
+
+## 从源码安装
 
 ### 1. 装好两个工具
 

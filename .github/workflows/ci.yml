@@ -39,3 +39,28 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build # type-check (tsc -b) + bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: frontend/dist
+
+  publish-web:
+    # install.sh downloads this prebuilt UI, so users don't need Node.js.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+      - run: tar -czf web-dist.tgz -C dist .
+      - run: |
+          gh release view web-latest >/dev/null 2>&1 || gh release create web-latest --prerelease \
+            --title "Web UI (latest build)" --notes "Prebuilt frontend for install.sh, rebuilt on every push to master."
+          gh release upload web-latest web-dist.tgz --clobber
