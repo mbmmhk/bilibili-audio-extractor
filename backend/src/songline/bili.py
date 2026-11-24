@@ -80,6 +80,7 @@ async def _get_json(url: str, params: dict, attempts: int = 4) -> dict:
 
 
 _SPI = "https://api.bilibili.com/x/frontend/finger/spi"
+_PLAYURL = "https://api.bilibili.com/x/player/playurl"
 
 
 def _spi_cookies(body: dict) -> dict[str, str]:
@@ -155,6 +156,40 @@ def transcript_path(video: VideoInfo, dest_dir: Path) -> Path:
     return dest_dir / f"{audio_stem(video)}.segments.json"
 
 
+def _playback_audio_info(video: VideoInfo, cookies: dict[str, str], headers: dict[str, str]) -> dict:
+    page = next((page for page in video.pages if page.page == video.page), None)
+    if page is None:
+        raise BiliError("找不到该分 P 的音轨信息")
+
+    try:
+        with httpx.Client(headers=headers, timeout=15) as client:
+            for name, value in cookies.items():
+                client.cookies.set(name, value, domain=".bilibili.com")
+            response = client.get(_PLAYURL, params={"bvid": video.bvid, "cid": page.cid, "qn": 64, "fnval": 16})
+            payload = response.raise_for_status().json()
+    except httpx.HTTPStatusError as e:
+        raise BiliError(f"获取 B 站音轨失败（HTTP {e.response.status_code}）") from e
+    except (httpx.HTTPError, ValueError) as e:
+        raise BiliError("B 站播放接口暂时无法返回音轨，请稍后重试") from e
+
+    if payload.get("code") != 0:
+        raise BiliError(f"获取 B 站音轨失败：{payload.get('message') or payload.get('code')}")
+    dash = (payload.get("data") or {}).get("dash") or {}
+    formats = []
+    for audio in dash.get("audio") or []:
+        url = audio.get("baseUrl") or audio.get("base_url")
+        if url and url.startswith("https://"):
+            formats.append({
+                "url": url,
+                "ext": "m4a",
+                "vcodec": "none",
+                "abr": (audio.get("bandwidth") or 0) / 1000,
+            })
+    if not formats:
+        raise BiliError("B 站播放接口未返回可用的独立音轨")
+    return {"id": video.bvid, "title": video.title, "formats": formats, "http_headers": headers}
+
+
 def download_audio(
     video: VideoInfo,
     dest_dir: Path,
@@ -176,6 +211,7 @@ def download_audio(
             if total:
                 on_progress(min(1.0, d.get("downloaded_bytes", 0) / total))
 
+    headers = {"User-Agent": _UA, "Referer": "https://www.bilibili.com/"}
     opts = {
         "format": "bestaudio/best",
         "outtmpl": str(dest_dir / f"{stem}.%(ext)s"),
@@ -183,7 +219,7 @@ def download_audio(
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
-        "http_headers": {"User-Agent": _UA, "Referer": "https://www.bilibili.com/"},
+        "http_headers": headers,
     }
     cookies = _device_cookies()
     if settings.bili_sessdata:
@@ -192,7 +228,15 @@ def download_audio(
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
                 _set_cookies(ydl.cookiejar, cookies)
-                info = ydl.extract_info(video.url, download=True)
+                try:
+                    info = ydl.extract_info(video.url, download=True)
+                except yt_dlp.utils.DownloadError as e:
+                    if attempt + 1 != DOWNLOAD_ATTEMPTS or "Unable to download webpage: HTTP Error 412" not in str(e):
+                        raise
+                    if should_cancel and should_cancel():
+                        raise Cancelled() from e
+                    log.info("Bilibili video webpage returned 412, requesting its audio tracks from the playback API")
+                    info = ydl.process_ie_result(_playback_audio_info(video, cookies, headers), download=True)
                 path = Path(ydl.prepare_filename(info))
             break
         except yt_dlp.utils.DownloadError as e:
