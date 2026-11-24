@@ -1,4 +1,8 @@
-from songline.fingerprint import Hit, merge_hits, plan_probes
+import asyncio
+
+import pytest
+
+from songline.fingerprint import Hit, merge_hits, plan_probes, verify
 from songline.models import SongRef, TimelineEntry
 
 
@@ -29,3 +33,34 @@ def test_probes_skip_confident_entries_and_sweep_gaps():
     assert not any(0 <= p <= 200 for p in pts)  # confident: no probe
     assert any(600 <= p <= 800 for p in pts)  # weak: probed
     assert any(200 < p < 600 for p in pts)  # long gap: swept
+
+
+class _SlowFp:
+    skipped = 0
+
+    def __init__(self):
+        self.started = 0
+        self.finished = 0
+
+    async def probe(self, pcm, t):
+        self.started += 1
+        await asyncio.sleep(0.01 * self.started)
+        self.finished += 1
+        return None
+
+
+@pytest.mark.asyncio
+async def test_verify_awaits_progress_and_stops_on_cancel():
+    entries = [entry(0, 200, "a", 0.4), entry(600, 800, "b", 0.4)]
+    assert len(plan_probes(entries, 1000)) > 2
+    fp, seen = _SlowFp(), []
+
+    async def progress(f):
+        seen.append(f)
+        if len(seen) == 2:
+            raise RuntimeError("cancelled")
+
+    with pytest.raises(RuntimeError):
+        await verify(fp, None, entries, 1000, on_progress=progress)
+    await asyncio.sleep(0.2)  # no probe keeps running in the background
+    assert fp.finished == 2

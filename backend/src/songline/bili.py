@@ -82,6 +82,16 @@ class Cancelled(Exception):
     pass
 
 
+def audio_stem(video: VideoInfo) -> str:
+    """File name (without extension) shared by a video page's audio and transcript."""
+    return f"{video.bvid}_p{video.page}"
+
+
+def transcript_path(video: VideoInfo, dest_dir: Path) -> Path:
+    """Where the transcript of a video page lives: the one copy, next to its audio."""
+    return dest_dir / f"{audio_stem(video)}.segments.json"
+
+
 def download_audio(
     video: VideoInfo,
     dest_dir: Path,
@@ -89,7 +99,7 @@ def download_audio(
     should_cancel: Callable[[], bool] | None = None,
 ) -> Path:
     """Download the audio-only stream (no video, no re-encode). Blocking."""
-    stem = f"{video.bvid}_p{video.page}"
+    stem = audio_stem(video)
     # Only the audio itself: "{stem}.segments.json" (cached transcript) shares the stem.
     existing = [p for p in dest_dir.glob(f"{stem}.*") if p.suffix not in (".part", ".ytdl", ".json")]
     if existing:

@@ -53,15 +53,8 @@ class JobStore:
             self._db.execute("DELETE FROM transcripts WHERE job_id=?", (job_id,))
             self._db.commit()
 
-    def save_transcript(self, job_id: str, segments: list[Segment]) -> None:
-        with self._lock:
-            self._db.execute(
-                "INSERT OR REPLACE INTO transcripts VALUES (?, ?)",
-                (job_id, json.dumps([s.model_dump() for s in segments], ensure_ascii=False)),
-            )
-            self._db.commit()
-
     def transcript(self, job_id: str) -> list[Segment] | None:
+        """Legacy: transcripts saved here by older versions (now kept next to the audio)."""
         with self._lock:
             row = self._db.execute("SELECT data FROM transcripts WHERE job_id=?", (job_id,)).fetchone()
         return [Segment(**s) for s in json.loads(row[0])] if row else None
@@ -126,7 +119,11 @@ class JobManager:
                 if item.finished:
                     return
         finally:
-            self._subs[job_id].discard(q)
+            subs = self._subs.get(job_id)
+            if subs is not None:
+                subs.discard(q)
+                if not subs:
+                    del self._subs[job_id]
 
     def _publish(self, job: Job) -> None:
         for q in list(self._subs.get(job.id, ())):
@@ -150,7 +147,6 @@ class JobManager:
             update=update,
             is_cancelled=lambda: job.id in self._cancel,
             cache=self.cache,
-            save_transcript=lambda segs: self.store.save_transcript(job.id, segs),
         )
         try:
             await pipeline.run(job, ctx)

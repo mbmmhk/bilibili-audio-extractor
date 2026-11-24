@@ -37,7 +37,6 @@ class Context:
     update: Callable[[Job], Awaitable[None]]  # persist + broadcast
     is_cancelled: Callable[[], bool]
     cache: KVCache
-    save_transcript: Callable[[list[Segment]], None] | None = None
 
 
 class JobCancelled(Exception):
@@ -85,7 +84,7 @@ async def run(job: Job, ctx: Context) -> Job:
     # 3. Transcribe in chunks; match lyrics incrementally so results stream in.
     client = NeteaseClient(ctx.cache)
     matcher = Matcher(client, hint=f"{job.video.title} {job.video.owner}")
-    seg_cache = audio_path.with_suffix(".segments.json")
+    seg_cache = bili.transcript_path(job.video, audio_path.parent)
     segments: list[Segment] = []
     try:
         if seg_cache.exists():
@@ -107,8 +106,6 @@ async def run(job: Job, ctx: Context) -> Job:
             if ctx.is_cancelled():
                 raise JobCancelled()
             seg_cache.write_text(json.dumps([s.model_dump() for s in segments], ensure_ascii=False))
-        if ctx.save_transcript:
-            ctx.save_transcript(segments)
 
         # 4. Final matching pass
         await set_stage(Stage.matching, 0, "匹配歌曲…")
@@ -127,7 +124,7 @@ async def run(job: Job, ctx: Context) -> Job:
                     pcm,
                     job.timeline,
                     duration,
-                    on_progress=lambda f: asyncio.ensure_future(set_stage(Stage.verifying, f, f"音频指纹核对 {f:.0%}")),
+                    on_progress=lambda f: set_stage(Stage.verifying, f, f"音频指纹核对 {f:.0%}"),
                     should_cancel=ctx.is_cancelled,
                 )
             finally:

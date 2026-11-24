@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import Callable
+from typing import Awaitable, Callable
 
 import numpy as np
 from shazamio import Shazam
@@ -109,7 +109,7 @@ async def verify(
     pcm: np.ndarray,
     entries: list[TimelineEntry],
     duration: float,
-    on_progress: Callable[[float], None] | None = None,
+    on_progress: Callable[[float], Awaitable[None]] | None = None,
     should_cancel: Callable[[], bool] | None = None,
 ) -> tuple[list[TimelineEntry], int]:
     """Returns (timeline, number of probes skipped because of limits)."""
@@ -126,12 +126,18 @@ async def verify(
             hits.append(h)
         done += 1
         if on_progress:
-            on_progress(done / max(1, len(probes)))
+            await on_progress(done / max(1, len(probes)))
 
+    tasks = [asyncio.create_task(one(t)) for t in probes]
     try:
-        await asyncio.wait_for(asyncio.gather(*(one(t) for t in probes)), BUDGET)
+        await asyncio.wait_for(asyncio.gather(*tasks), BUDGET)
     except asyncio.TimeoutError:
         log.warning("shazam budget exhausted after %d/%d probes", done, len(probes))
+    finally:
+        # A probe that raised (e.g. the job was cancelled) leaves its siblings running.
+        for t in tasks:
+            t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
     skipped = len(probes) - done + fp.skipped
     return merge_hits(entries, hits), skipped
 

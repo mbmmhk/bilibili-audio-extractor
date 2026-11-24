@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -11,6 +12,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from . import bili
 from .cache import KVCache
 from .config import settings
 from .jobs import JobManager, JobStore
@@ -79,7 +81,10 @@ def create_app() -> FastAPI:
 
     @app.get("/api/jobs/{job_id}/transcript", response_model=list[Segment])
     async def transcript(job_id: str) -> list[Segment]:
-        _get(job_id)
+        job = _get(job_id)
+        path = bili.transcript_path(job.video, settings.audio_dir) if job.video else None
+        if path and path.exists():
+            return [Segment(**s) for s in json.loads(path.read_text())]
         return store.transcript(job_id) or []
 
     @app.get("/api/jobs/{job_id}/audio")
@@ -87,7 +92,7 @@ def create_app() -> FastAPI:
         job = _get(job_id)
         if not job.video:
             raise HTTPException(404, "音频尚未下载")
-        stem = f"{job.video.bvid}_p{job.video.page}"
+        stem = bili.audio_stem(job.video)
         files = [p for p in settings.audio_dir.glob(f"{stem}.*") if p.suffix in (".m4a", ".mp4", ".webm", ".mp3", ".aac", ".flac", ".opus")]
         if not files:
             raise HTTPException(404, "音频尚未下载")
