@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from pathlib import Path
@@ -55,11 +56,30 @@ async def resolve(raw: str) -> tuple[str | int, int]:
     raise BiliError("没有在链接里找到 BV 号，请粘贴 B 站视频链接")
 
 
+async def _get_json(url: str, params: dict, attempts: int = 4) -> dict:
+    """GET a Bilibili API, retrying the odd empty / HTML / rate-limited reply."""
+    last = ""
+    async with _client() as c:
+        for i in range(attempts):
+            try:
+                r = await c.get(url, params=params)
+                if r.status_code == 200:
+                    return r.json()
+                last = f"HTTP {r.status_code}"
+            except (httpx.HTTPError, ValueError) as e:  # network trouble, or not JSON
+                last = type(e).__name__
+            log.warning("bilibili %s failed (%s), attempt %d", url, last, i + 1)
+            if i + 1 < attempts:
+                await asyncio.sleep(RETRY_DELAY * (i + 1))
+    raise BiliError("B 站暂时没有返回视频信息（网络不稳定，或请求太频繁被临时限制），请稍等一会儿再点「重新识别」")
+
+
+RETRY_DELAY = 1.5
+
+
 async def fetch_info(vid: str | int, page: int = 1) -> VideoInfo:
     params = {"bvid": vid} if isinstance(vid, str) else {"aid": vid}
-    async with _client() as c:
-        r = await c.get("https://api.bilibili.com/x/web-interface/view", params=params)
-    body = r.json()
+    body = await _get_json("https://api.bilibili.com/x/web-interface/view", params)
     if body.get("code") != 0:
         raise BiliError(f"获取视频信息失败：{body.get('message') or body.get('code')}")
     d = body["data"]
