@@ -100,17 +100,12 @@ export function JobView({
                 <RotateCw className="size-4" /> 重新识别
               </Btn>
             )}
-            <Btn
-              onClick={async () => {
-                if (confirm("删除这条记录？")) {
-                  await api.remove(job.id);
-                  onDeleted();
-                }
+            <DeleteBtn
+              onConfirm={async () => {
+                await api.remove(job.id);
+                onDeleted();
               }}
-              danger
-            >
-              <Trash2 className="size-4" />
-            </Btn>
+            />
           </div>
         </div>
       </div>
@@ -158,6 +153,38 @@ export function JobView({
         <Player ref={player} src={api.audioUrl(job.id)} entries={job.timeline} duration={duration} onTime={setTime} />
       )}
     </div>
+  );
+}
+
+/** Click once to arm, again within 3s to delete. (Native confirm() is silently
+ * blocked in some embedded browsers, which made deleting impossible there.) */
+function DeleteBtn({ onConfirm }: { onConfirm: () => Promise<void> }) {
+  const [armed, setArmed] = useState(false);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), 3000);
+    return () => clearTimeout(t);
+  }, [armed]);
+
+  if (!armed) {
+    return (
+      <Btn onClick={() => (setError(false), setArmed(true))} danger>
+        <Trash2 className="size-4" />
+        {error && <span>删除失败，重试</span>}
+      </Btn>
+    );
+  }
+  return (
+    <button
+      onClick={() => {
+        setArmed(false);
+        onConfirm().catch(() => setError(true));
+      }}
+      className="flex items-center gap-1.5 rounded-lg bg-red-600 px-2.5 py-1.5 text-sm font-medium text-white transition hover:bg-red-700"
+    >
+      <Trash2 className="size-4" /> 确认删除
+    </button>
   );
 }
 

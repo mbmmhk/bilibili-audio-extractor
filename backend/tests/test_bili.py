@@ -18,26 +18,32 @@ INFO = {
 
 
 def _fake(monkeypatch, replies):
-    """Serve `replies` (status, body) in turn to bili._client()."""
+    """Serve `replies` (status, body) in turn to bili._client(); returns the Cookie headers sent."""
+    seen = []
     calls = iter(replies)
 
     def handler(request):
+        if request.url.path.endswith("/finger/spi"):
+            return httpx.Response(200, json={"code": 0, "data": {"b_3": "B3", "b_4": "B4"}})
+        seen.append(request.headers.get("cookie", ""))
         status, body = next(calls)
         return httpx.Response(status, json=body) if isinstance(body, dict) else httpx.Response(status, text=body)
 
     monkeypatch.setattr(bili, "_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     monkeypatch.setattr(bili, "RETRY_DELAY", 0)
+    return seen
 
 
 @pytest.mark.asyncio
 async def test_info_retries_empty_and_blocked_replies(monkeypatch):
-    _fake(monkeypatch, [(200, ""), (412, "<html>风控</html>"), (200, INFO)])
+    sent = _fake(monkeypatch, [(200, ""), (412, "<html>风控</html>"), (200, INFO)])
     info = await bili.fetch_info("BV1CK1FzMEU8")
     assert info.title == "t" and info.cover.startswith("https://")
+    assert all("buvid3=B3" in c for c in sent)  # looks like a browser
 
 
 @pytest.mark.asyncio
 async def test_info_gives_a_readable_error_when_bilibili_keeps_failing(monkeypatch):
-    _fake(monkeypatch, [(200, "")] * 4)
-    with pytest.raises(bili.BiliError, match="重新识别"):
+    _fake(monkeypatch, [(200, "")] * 3 + [(412, "<html></html>")])
+    with pytest.raises(bili.BiliError, match="重新识别.*HTTP 412"):
         await bili.fetch_info("BV1CK1FzMEU8")

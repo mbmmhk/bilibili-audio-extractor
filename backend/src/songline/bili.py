@@ -60,6 +60,7 @@ async def _get_json(url: str, params: dict, attempts: int = 4) -> dict:
     """GET a Bilibili API, retrying the odd empty / HTML / rate-limited reply."""
     last = ""
     async with _client() as c:
+        await _browser_cookies(c)
         for i in range(attempts):
             try:
                 r = await c.get(url, params=params)
@@ -71,7 +72,22 @@ async def _get_json(url: str, params: dict, attempts: int = 4) -> dict:
             log.warning("bilibili %s failed (%s), attempt %d", url, last, i + 1)
             if i + 1 < attempts:
                 await asyncio.sleep(RETRY_DELAY * (i + 1))
-    raise BiliError("B 站暂时没有返回视频信息（网络不稳定，或请求太频繁被临时限制），请稍等一会儿再点「重新识别」")
+    raise BiliError(
+        f"B 站暂时没有返回视频信息（网络不稳定，或请求太频繁被临时限制），请稍等一会儿再点「重新识别」。原因：{last}"
+    )
+
+
+async def _browser_cookies(c: httpx.AsyncClient) -> None:
+    """Get the buvid3/buvid4 device cookies a browser would have. Without them
+    Bilibili answers some networks with HTTP 412 (anti-crawler)."""
+    try:
+        r = await c.get("https://api.bilibili.com/x/frontend/finger/spi")
+        d = r.json().get("data") or {}
+        for name, key in (("buvid3", "b_3"), ("buvid4", "b_4")):
+            if d.get(key):
+                c.cookies.set(name, d[key], domain=".bilibili.com")
+    except (httpx.HTTPError, ValueError):
+        pass  # best effort; the API call itself may still work
 
 
 RETRY_DELAY = 1.5
