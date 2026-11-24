@@ -56,7 +56,13 @@ say "安装依赖（第一次需要几分钟）…"
 export UV_PROJECT_ENVIRONMENT="$APP_HOME/venv"
 (cd "$APP_HOME/app/backend" && "$UV" sync --locked --no-dev --quiet)
 
-# 4. Double-click launcher.
+# 4. The speech model (~1.6 GB) now, with progress, instead of silently on first use.
+say "下载语音识别模型（约 1.6 GB，只需一次）…"
+if ! (cd "$APP_HOME/app/backend" && "$UV" run --no-dev --no-sync songline setup); then
+  echo "    模型这次没下载完，没关系：第一次识别时会接着下载，网页上会显示进度。"
+fi
+
+# 5. Double-click launcher.
 LAUNCHER="$LAUNCHER_DIR/Songline.command"
 mkdir -p "$LAUNCHER_DIR"
 cat >"$LAUNCHER" <<EOF

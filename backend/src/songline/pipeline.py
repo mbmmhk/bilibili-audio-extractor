@@ -8,7 +8,7 @@ import logging
 from dataclasses import dataclass
 from typing import Awaitable, Callable
 
-from . import bili
+from . import bili, model
 from .audio import SAMPLE_RATE, load_pcm
 from .cache import KVCache
 from .config import settings
@@ -91,6 +91,15 @@ async def run(job: Job, ctx: Context) -> Job:
             segments = [Segment(**s) for s in json.loads(seg_cache.read_text())]
             await set_stage(Stage.transcribing, 1, "使用已缓存的转写结果")
         else:
+            await set_stage(Stage.transcribing, 0, "加载语音识别模型…")
+
+            def model_progress(done: int, total: int) -> None:  # runs in a worker thread
+                if ctx.is_cancelled():
+                    raise JobCancelled()
+                job.message = model.describe(done, total)
+                asyncio.run_coroutine_threadsafe(ctx.update(job), loop)
+
+            await asyncio.to_thread(model.ensure, settings.whisper_model, model_progress)
             await set_stage(Stage.transcribing, 0, "加载语音识别模型…")
             gen = transcribe_chunks(pcm, should_cancel=ctx.is_cancelled)
             while True:

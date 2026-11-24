@@ -84,5 +84,30 @@ def serve(
     uvicorn.run(create_app(), host=host, port=port, log_level="warning")
 
 
+@app.command()
+def setup() -> None:
+    """下载语音识别模型（约 1.6 GB，只需一次），这样第一次识别时不用等。"""
+    from rich.progress import DownloadColumn, TransferSpeedColumn
+
+    from . import model
+
+    repo = settings.whisper_model
+    if model.cached(repo):
+        console.print("语音识别模型已就绪。")
+        return
+    console.print(f"下载语音识别模型 {repo}（只需一次）…")
+    with Progress(
+        TextColumn("{task.description}"), BarColumn(), DownloadColumn(), TransferSpeedColumn(), console=console
+    ) as bar:
+        task = bar.add_task("模型", total=None)
+
+        def progress(done: int, total: int) -> None:
+            bar.update(task, completed=done, total=total or None)
+
+        model.ensure(repo, progress, poll=0.5)
+        bar.update(task, completed=bar.tasks[0].total or 1, total=bar.tasks[0].total or 1)
+    console.print("语音识别模型已就绪。")
+
+
 def main() -> None:
     app()
