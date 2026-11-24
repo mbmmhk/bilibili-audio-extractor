@@ -37,9 +37,14 @@ mkdir -p "$APP_HOME"
 NEW="$(mktemp -d "$APP_HOME/.new.XXXXXX")"
 trap 'rm -rf "$NEW"' EXIT
 trap 'printf "\033[1;31m安装没有完成\033[0m（多半是网络问题），已保留原来的版本，可以稍后重新运行。\n" >&2' ERR
-curl -fsSL "$SOURCE_URL" | tar -xz -C "$NEW" --strip-components=1
+# GitHub can be flaky from some networks: retry, and only unpack complete files.
+fetch() { curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors -o "$2" "$1"; }
+fetch "$SOURCE_URL" "$NEW/.src.tgz"
+fetch "$WEB_URL" "$NEW/.web.tgz"
+tar -xzf "$NEW/.src.tgz" -C "$NEW" --strip-components=1
 mkdir -p "$NEW/frontend/dist"
-curl -fsSL "$WEB_URL" | tar -xz -C "$NEW/frontend/dist"
+tar -xzf "$NEW/.web.tgz" -C "$NEW/frontend/dist"
+rm -f "$NEW/.src.tgz" "$NEW/.web.tgz"
 [ -f "$NEW/frontend/dist/index.html" ] || die "网页界面下载不完整，请稍后重试。"
 rm -rf "$APP_HOME/app.old"
 [ -d "$APP_HOME/app" ] && mv "$APP_HOME/app" "$APP_HOME/app.old"
