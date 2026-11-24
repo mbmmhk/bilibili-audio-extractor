@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import http.cookiejar
 import logging
 import re
+import time
 from pathlib import Path
 from typing import Callable
 from urllib.parse import parse_qs, urlparse
@@ -77,20 +79,45 @@ async def _get_json(url: str, params: dict, attempts: int = 4) -> dict:
     )
 
 
+_SPI = "https://api.bilibili.com/x/frontend/finger/spi"
+
+
+def _spi_cookies(body: dict) -> dict[str, str]:
+    d = body.get("data") or {}
+    return {name: d[key] for name, key in (("buvid3", "b_3"), ("buvid4", "b_4")) if d.get(key)}
+
+
 async def _browser_cookies(c: httpx.AsyncClient) -> None:
     """Get the buvid3/buvid4 device cookies a browser would have. Without them
     Bilibili answers some networks with HTTP 412 (anti-crawler)."""
     try:
-        r = await c.get("https://api.bilibili.com/x/frontend/finger/spi")
-        d = r.json().get("data") or {}
-        for name, key in (("buvid3", "b_3"), ("buvid4", "b_4")):
-            if d.get(key):
-                c.cookies.set(name, d[key], domain=".bilibili.com")
+        for name, value in _spi_cookies((await c.get(_SPI)).json()).items():
+            c.cookies.set(name, value, domain=".bilibili.com")
     except (httpx.HTTPError, ValueError):
         pass  # best effort; the API call itself may still work
 
 
+def _device_cookies() -> dict[str, str]:
+    """Blocking twin of _browser_cookies, for yt-dlp."""
+    try:
+        with httpx.Client(headers={"User-Agent": _UA, "Referer": "https://www.bilibili.com/"}, timeout=15) as c:
+            return _spi_cookies(c.get(_SPI).json())
+    except (httpx.HTTPError, ValueError):
+        return {}
+
+
+def _set_cookies(jar, cookies: dict[str, str]) -> None:
+    for name, value in cookies.items():
+        jar.set_cookie(
+            http.cookiejar.Cookie(
+                0, name, value, None, False, ".bilibili.com", True, True, "/", True,
+                False, None, False, None, None, {},
+            )
+        )
+
+
 RETRY_DELAY = 1.5
+DOWNLOAD_ATTEMPTS = 3
 
 
 async def fetch_info(vid: str | int, page: int = 1) -> VideoInfo:
@@ -158,16 +185,23 @@ def download_audio(
         "noplaylist": True,
         "http_headers": {"User-Agent": _UA, "Referer": "https://www.bilibili.com/"},
     }
+    cookies = _device_cookies()
     if settings.bili_sessdata:
-        opts["http_headers"]["Cookie"] = f"SESSDATA={settings.bili_sessdata}"
-    try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(video.url, download=True)
-            path = Path(ydl.prepare_filename(info))
-    except yt_dlp.utils.DownloadError as e:
-        if isinstance(e.exc_info[1] if e.exc_info else None, Cancelled):
-            raise Cancelled() from e
-        raise BiliError(f"下载音频失败：{e}") from e
+        cookies["SESSDATA"] = settings.bili_sessdata
+    for attempt in range(DOWNLOAD_ATTEMPTS):
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                _set_cookies(ydl.cookiejar, cookies)
+                info = ydl.extract_info(video.url, download=True)
+                path = Path(ydl.prepare_filename(info))
+            break
+        except yt_dlp.utils.DownloadError as e:
+            if isinstance(e.exc_info[1] if e.exc_info else None, Cancelled):
+                raise Cancelled() from e
+            if "412" not in str(e) or attempt + 1 == DOWNLOAD_ATTEMPTS:
+                raise BiliError(f"下载音频失败：{e}") from e
+            log.warning("bilibili download got 412, retrying (%d)", attempt + 1)
+            time.sleep(RETRY_DELAY * (attempt + 1))
     if not path.exists():
         raise BiliError("下载完成但找不到音频文件")
     return path

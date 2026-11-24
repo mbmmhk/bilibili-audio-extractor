@@ -47,3 +47,43 @@ async def test_info_gives_a_readable_error_when_bilibili_keeps_failing(monkeypat
     _fake(monkeypatch, [(200, "")] * 3 + [(412, "<html></html>")])
     with pytest.raises(bili.BiliError, match="重新识别.*HTTP 412"):
         await bili.fetch_info("BV1CK1FzMEU8")
+
+
+def test_download_sends_device_cookies_and_retries_412(tmp_path, monkeypatch):
+    import http.cookiejar
+
+    import yt_dlp
+
+    from songline.models import VideoInfo
+
+    attempts, cookies_seen = [], []
+
+    class FakeYDL:
+        def __init__(self, opts):
+            self.opts = opts
+            self.cookiejar = http.cookiejar.CookieJar()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def extract_info(self, url, download):
+            attempts.append(url)
+            cookies_seen.append(sorted(c.name for c in self.cookiejar))
+            if len(attempts) == 1:
+                raise yt_dlp.utils.DownloadError("Unable to download webpage: HTTP Error 412: Precondition Failed")
+            (tmp_path / "BV1CK1FzMEU8_p1.m4a").write_bytes(b"audio")
+            return {}
+
+        def prepare_filename(self, info):
+            return str(tmp_path / "BV1CK1FzMEU8_p1.m4a")
+
+    monkeypatch.setattr(bili.yt_dlp, "YoutubeDL", FakeYDL)
+    monkeypatch.setattr(bili, "_device_cookies", lambda: {"buvid3": "B3", "buvid4": "B4"})
+    monkeypatch.setattr(bili, "RETRY_DELAY", 0)
+    v = VideoInfo(bvid="BV1CK1FzMEU8", aid=1, title="t", owner="o", cover="", duration=1, page=1, pages=[], description="")
+    assert bili.download_audio(v, tmp_path).name == "BV1CK1FzMEU8_p1.m4a"
+    assert len(attempts) == 2
+    assert cookies_seen == [["buvid3", "buvid4"]] * 2
