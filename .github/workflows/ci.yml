@@ -25,6 +25,17 @@ jobs:
       - run: uv sync --locked
       - run: uv run pytest -q
 
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift package tests
+        run: swift test --package-path mac/Packages/SonglineKit
+      - name: Build the app (unsigned)
+        run: |
+          xcodebuild -project mac/Songline.xcodeproj -scheme Songline -configuration Debug \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

@@ -85,7 +85,11 @@ def serve(
 
 
 @app.command()
-def setup() -> None:
+def setup(
+    json_progress: bool = typer.Option(
+        False, "--json-progress", help='每秒输出一行 {"done": 字节, "total": 字节}，给 Mac App 显示进度用'
+    ),
+) -> None:
     """下载语音识别模型（约 1.6 GB，只需一次），这样第一次识别时不用等。"""
     from rich.progress import DownloadColumn, TransferSpeedColumn
 
@@ -93,7 +97,11 @@ def setup() -> None:
 
     repo = settings.whisper_model
     if model.cached(repo):
-        console.print("语音识别模型已就绪。")
+        if not json_progress:
+            console.print("语音识别模型已就绪。")
+        return
+    if json_progress:
+        model.ensure(repo, lambda done, total: print(json.dumps({"done": done, "total": total}), flush=True))
         return
     console.print(f"下载语音识别模型 {repo}（只需一次）…")
     with Progress(
