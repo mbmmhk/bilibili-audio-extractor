@@ -16,20 +16,22 @@ let package = Package(
         .target(name: "SonglineAPI", dependencies: ["SonglineCore"]),
         .target(name: "SonglineBackend"),
         .target(name: "SonglinePlayer", dependencies: ["SonglineCore"]),
+        .target(name: "SonglineStore", dependencies: ["SonglineCore"]),
         // App 级状态：把后端、接口、播放器串起来，界面只读写它。不含任何视图。
         .target(
             name: "SonglineState",
-            dependencies: ["SonglineCore", "SonglineAPI", "SonglineBackend", "SonglinePlayer"]
+            dependencies: ["SonglineCore", "SonglineAPI", "SonglineBackend", "SonglinePlayer", "SonglineStore"]
         ),
         // 只有 SwiftUI 视图。
         .target(
             name: "SonglineUI",
-            dependencies: ["SonglineState", "SonglineCore", "SonglineAPI", "SonglineBackend", "SonglinePlayer"]
+            dependencies: ["SonglineState", "SonglineCore", "SonglineAPI", "SonglineBackend", "SonglinePlayer", "SonglineStore"]
         ),
 
         .testTarget(name: "SonglineCoreTests", dependencies: ["SonglineCore"]),
         .testTarget(name: "SonglineAPITests", dependencies: ["SonglineAPI"]),
         .testTarget(name: "SonglineBackendTests", dependencies: ["SonglineBackend"]),
-        .testTarget(name: "SonglineStateTests", dependencies: ["SonglineState", "SonglineAPI"]),
+        .testTarget(name: "SonglineStoreTests", dependencies: ["SonglineStore"]),
+        .testTarget(name: "SonglineStateTests", dependencies: ["SonglineState", "SonglineAPI", "SonglineStore"]),
     ]
 )

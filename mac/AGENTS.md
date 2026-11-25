@@ -5,7 +5,7 @@
 ## 分工
 
 - **界面**（SwiftUI 视图、布局、动画、视觉风格）→ 只改 `Packages/SonglineKit/Sources/SonglineUI/`，需要时可以改 `Songline/`（App 场景、菜单）和 `Songline/Assets.xcassets`。
-- **系统层**（`SonglineState`、`SonglineCore`、`SonglineAPI`、`SonglineBackend`、`SonglinePlayer`）和 Python 后端 `backend/` 由另一边负责，**不要改**。界面需要新的数据或操作时，在交付说明里写清楚"需要什么"，不要自己在界面里绕过去实现（比如直接发网络请求、自己开 `AVPlayer`、自己启动进程）。
+- **系统层**（`SonglineState`、`SonglineCore`、`SonglineAPI`、`SonglineBackend`、`SonglinePlayer`、`SonglineStore`）和 Python 后端 `backend/` 由另一边负责，**不要改**。界面需要新的数据或操作时，在交付说明里写清楚"需要什么"，不要自己在界面里绕过去实现（比如直接发网络请求、自己开 `AVPlayer`、自己启动进程）。
 
 ## 现有界面只是基线
 
@@ -20,7 +20,11 @@
 
 **`SonglineAppModel`**（总入口，在 `SonglineState` 模块）
 - `backend: BackendRuntime`、`library: LibraryModel?`、`player: PlayerModel?`：后端就绪前 `library` 和 `player` 为 nil，这时应显示引导页。
+- `store: LibraryStore`：我喜欢的歌、最近播放（一直都有，不等后端）。
 - `start()`：启动或重试后端。
+- `open(link:)`：打开拖进窗口或粘贴的 B 站链接 / BV 号 / 分享文字。识别过的直接选中那张歌单，没识别过的开始识别；后端还没就绪时会先记下，就绪后再打开。`open(_ url: URL)` 用于 `songline://` 链接，App 本体已经接好。
+- `openError: String?`：打开链接失败的说明，可以显示出来。
+- `tracks(for: [SavedSong]) -> [Track]`：把收藏或最近播放的歌变成能播的歌（原记录被删的会略过），再交给 `player.play(_:startAt:)`。
 
 **`BackendRuntime.state: BackendState`**
 - `.idle` / `.starting`：启动中。
@@ -32,24 +36,43 @@
 - `jobs: [Job]`：所有直播回放，最新的在前；识别中的会实时更新。
 - `selection: Selection?`：`.recognize`（识别新回放页）或 `.job(id)`。
 - `job(_ id:) -> Job?`
-- `recognize(_ text:shazam:)`：可以传链接、BV 号或分享文字。
+- `recognize(_ text:shazam:)`：可以传链接、BV 号或分享文字。一般用 `open(_:)` 更好：识别过的视频不会重复识别。
+- `lyrics(for jobID:) async throws -> Lyrics`：这场回放的歌词（语音转写）。
 - `rerun(_:)`、`cancel(_:)`、`delete(_:)`、`refresh()`；`loadError`。
 
 **`PlayerModel`**（播放）
-- `current: Track?`、`isPlaying`、`elapsed`（当前这首播了几秒）、`time`（在整场回放里的位置）、`queue.hasNext`。
-- `play(_ tracks:startAt:)`、`togglePlay()`、`pause()`、`resume()`、`next()`、`previous()`、`seek(toFraction:)`。
+- `current: Track?`、`isPlaying`、`elapsed`（当前这首播了几秒）、`time`（在整场回放里的位置，歌词高亮用它）。
+- `mode: PlaybackMode`：`.songsOnly`（只听歌，跳过歌与歌之间的聊天，默认）或 `.wholeStream`（整场按原样播）。可以直接赋值。
+- `isBetweenSongs`：整场模式下，当前这首唱完了、正在播聊天。
+- `play(_ tracks:startAt:)`、`togglePlay()`、`pause()`、`resume()`、`next()`、`previous()`。
+- `seek(toFraction:)`：在当前这首里拖进度；`seek(to: 秒)`：跳到回放里的任意位置（比如点歌词里的某一句）。
+- 播放队列：`queue.items`、`queue.position`（正在播第几首）、`queue.upcoming`、`queue.hasNext`；`playNext(_:)`（下一首播放）、`addToQueue(_:)`、`playQueueItem(at:)`、`removeFromQueue(at:)`（正在播的那首移不掉）、`moveInQueue(from:to:)`、`clearUpcoming()`。
+- 媒体键、耳机按键、控制中心和锁屏的「正在播放」已经由系统层接好，界面不用管。
+
+**`LibraryStore`**（我喜欢的歌、最近播放，在 `SonglineStore` 模块）
+- `favorites: [SavedSong]`（最新收藏的在前）、`recent: [SavedSong]`（最近播放的在前，最多 200 首）。
+- `isFavorite(_ track:)`、`toggleFavorite(_ track:)`、`removeFavorite(id:)`、`clearRecent()`。播放时会自动记录最近播放。
+- `SavedSong`：`title`、`artist`、`albumTitle`、`coverURL`、`duration`、`date`（收藏或播放的时间）。
 
 **数据（`SonglineCore`）**
 - `Job`：一场回放 = 一张歌单。常用：`title`、`video?.owner`、`video?.coverURL`、`stage`、`progress`、`message`、`error`、`isFinished`、`tracks`、`timelineText`、`createdDate`。
 - `Track`：一首歌。`title`、`artist`、`start`、`end`、`duration`、`albumTitle`、`coverURL`。
+- `Lyrics`：`lines`（整场的句子，按时间排好）、`lines(for: track)`（这首歌的句子）、`index(at: time, in: lines)`（`time` 时唱到第几句，没开始时为 nil）。每句是 `Segment`：`start`、`end`、`text`。
 - `TimelineEntry`：`confidence`（0...1）、`sources`（`lyrics` / `shazam` / `spoken`）、`alternatives`（其他可能的歌名）。
 - 工具：`formatTime(_:)`、`BiliLink.extract(from:)`、`BiliLink.looksLikeVideo(_:)`。
 
-## 还没有、但计划中的系统能力
+## 界面要做的（系统接口都已经有了）
 
-下面这些界面暂时**不要自己实现**。需要时提出来，系统层会补上接口：
+- **歌词页**：`library.lyrics(for:)` + `Lyrics.lines(for:)` + `index(at: player.time, in:)` 逐句高亮；点一句用 `player.seek(to: line.start)`。
+- **「只听歌」开关**：绑定 `player.mode`。
+- **播放队列面板**：用上面 `PlayerModel` 的队列接口。
+- **我喜欢的歌 / 最近播放**：侧边栏入口 + 列表页，用 `store` 和 `tracks(for:)`。
+- **拖链接进窗口**：`.onDrop` / `.dropDestination` 拿到文字或 URL 后调用 `model.open(link:)`。
+- **菜单栏迷你播放器**：用 `MenuBarExtra` 场景，数据全部来自 `PlayerModel`。
 
-歌词（转写内容按时间逐句定位）、「只听歌」模式、可编辑的播放队列、媒体键和「正在播放」、我喜欢的歌和最近播放（本地存储）、拖链接到 Dock / `songline://` 链接、菜单栏迷你播放器的数据源。
+还没有的：**搜索**（跨歌单搜歌名、歌手）。需要的话提出来。
+
+已知限制：识别记录只在 App 里操作时才会更新。在网页版或命令行里删除、新建的记录，App 要重新打开或调用 `library.refresh()` 才会看到。
 
 ## 约定
 

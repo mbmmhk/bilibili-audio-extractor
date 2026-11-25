@@ -31,5 +31,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.shutdown()
     }
 
+    /// songline://open?url=… 或者别的方式交给 App 的 B 站链接。
+    func application(_ application: NSApplication, open urls: [URL]) {
+        urls.forEach(model.open)
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }

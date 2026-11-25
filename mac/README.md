@@ -41,7 +41,8 @@ CI 每次提交都会跑这些测试，并编译整个 App。
 | 颜色、字体、通用组件 | `SonglineUI/DesignSystem/` |
 | 新的后端接口 | `SonglineAPI`：先改 `SonglineService` 协议，再分别实现 HTTP 版和 Mock 版 |
 | 纯逻辑（切歌规则、时间格式等） | `SonglineCore`，并配上测试 |
-| 播放相关 | `SonglinePlayer` |
+| 播放相关（队列、只听歌、媒体键） | `SonglinePlayer` |
+| 收藏、最近播放 | `SonglineStore` |
 | 安装、启动后端 | `SonglineBackend` |
 
 App 本体（`Songline/`）只负责组装，尽量不在里面写业务代码。

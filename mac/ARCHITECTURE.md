@@ -1,6 +1,6 @@
 # Songline for Mac：架构设计
 
-> 状态：第 1 步已实现（分支 `mac-app`）；第 2、3 步待做。
+> 状态：第 1 步和第 2 步的系统接口已实现（分支 `mac-app`），界面由 Codex 按 [AGENTS.md](AGENTS.md) 制作；第 3 步待做。
 
 目标：做一个原生的 Mac 音乐播放器，把直播回放当歌单来听。
 双击打开，不需要终端；朋友们**用 Xcode 打开就能改代码、点 Run 运行**。
@@ -52,7 +52,7 @@ flowchart TB
     UI["SonglineUI（只有视图）<br/>侧边栏 · 歌单页 · 歌词页 · 播放条 · 安装引导"]
     State["SonglineState<br/>SonglineAppModel · LibraryModel"]
     Player["SonglinePlayer<br/>播放队列 · 只听歌 · 媒体键 · 正在播放"]
-    Store["SonglineStore<br/>我喜欢的歌 · 播放记录（SwiftData）"]
+    Store["SonglineStore<br/>我喜欢的歌 · 最近播放（JSON 文件）"]
     API["SonglineAPI<br/>HTTP + 实时事件"]
     Backend["SonglineBackend<br/>安装 · 启动 · 停止"]
     Core["SonglineCore<br/>数据模型 · 歌单逻辑"]
@@ -118,7 +118,7 @@ mac/
 | **SonglineAPI** | 调用后端接口；用 `URLSession` 逐行读取实时事件（SSE），转成 `AsyncThrowingStream<Job>` | `protocol SonglineService`、`HTTPSonglineService`、`MockSonglineService` | Core |
 | **SonglineBackend** | 首次安装（uv、依赖、语音模型，带进度）；启动 `songline serve` 并等它就绪；崩溃后自动重启；App 退出时关闭；保留日志 | `@MainActor @Observable BackendRuntime`（耗时操作都在子进程里）、`enum BackendState` | 无 |
 | **SonglinePlayer** | `AVPlayer` 播放回放音频；播放队列（可以跨多场直播）；只听歌模式；接入媒体键（`MPRemoteCommandCenter`）和正在播放（`MPNowPlayingInfoCenter`） | `@MainActor @Observable PlayerModel`、`QueueItem` | Core、API |
-| **SonglineStore** | 本地数据：我喜欢的歌、最近播放、上次播到哪里。用 SwiftData 存在本机 | `FavoriteSong` `PlayHistory`、`LibraryStore` | Core |
+| **SonglineStore** | 本地数据：我喜欢的歌、最近播放。存在本机一个 JSON 文件里 | `LibraryStore`、`SavedSong` | Core |
 | **SonglineState** | App 级状态：启动后端、就绪后连上接口、管理歌单列表和侧边栏选中项、跟踪识别进度。不含任何视图，可以单独测试 | `SonglineAppModel`、`LibraryModel` | Core、API、Backend、Player、Store |
 | **SonglineUI** | 只有视图；读写 `SonglineState` 和播放器的状态，自己不发网络请求、不碰进程和音频 | `RootView` `PlaylistView` `NowPlayingView` `PlayerBar` … | State（及其下各层的数据类型） |
 
@@ -151,9 +151,14 @@ notInstalled → installing(步骤, 进度) → starting → running(baseURL)
 - 来自 `/api/jobs/{id}/transcript`，每句都有开始和结束时间，正好可以逐句滚动。
 - 只显示当前这首歌时间范围内的句子；「只听歌」关闭时显示整场的转写。
 
-**5.5 我喜欢的歌：存在本机（SwiftData）**
-- 收藏时记下 `回放 bvid + 开始时间 + 歌名`，不依赖后端的任务 id。删除并重新识别同一场回放后，收藏依然能对上。
+**5.5 我喜欢的歌：存在本机（JSON 文件）**
+- 收藏时记下 `bvid + 第几 P + 开始时间 + 歌名`，不依赖后端的任务 id。删除并重新识别同一场回放后，收藏依然能对上（开始时间允许 30 秒内的出入）。
+- 存在 `~/Library/Application Support/Songline/library.json`。原计划用 SwiftData，实际改用 JSON：数据量小，不用处理数据库迁移，出问题可以直接打开文件看，测试也简单。
 - 不改后端，网页版不受影响。
+
+**5.8 外部链接**
+- `songline://open?url=<B 站链接>`：App 已注册这个链接格式，浏览器书签或其他 App 可以直接把视频交给 Songline。
+- 拖进窗口的链接、粘贴的分享文字都走 `SonglineAppModel.open(link:)`：识别过的视频直接打开结果，没识别过的才开始识别；后端还没就绪时先记下，就绪后再打开。
 
 **5.6 并发**
 - 使用 Swift 6 严格并发检查。界面要观察的状态类（`BackendRuntime`、`LibraryModel`、`PlayerModel`）都是 `@MainActor @Observable`，耗时工作放在子进程或 `async` 网络请求里，不会卡住界面；跨模块传递的数据都符合 `Sendable`。
@@ -161,7 +166,7 @@ notInstalled → installing(步骤, 进度) → starting → running(baseURL)
 **5.7 沙盒、签名与系统版本**
 - 关闭 App Sandbox：需要启动子进程，还要读写 `~/.songline` 和 Application Support。开启 Hardened Runtime，为以后公证做准备。
 - 没有付费开发者账号时，朋友第一次打开需要在「系统设置 → 隐私与安全性」里点「仍要打开」。
-- 最低 macOS 14：需要 `@Observable`、SwiftData 和 `MenuBarExtra`。MLX 本来就只支持 Apple Silicon，用户的系统都不会太旧。
+- 最低 macOS 14：需要 `@Observable` 和 `MenuBarExtra`。MLX 本来就只支持 Apple Silicon，用户的系统都不会太旧。
 
 ## 6. 依赖（Swift Package Manager）
 
@@ -174,7 +179,7 @@ notInstalled → installing(步骤, 进度) → starting → running(baseURL)
 | 封面图片 | `AsyncImage` + `URLCache` |
 | 播放音频 | AVFoundation（`AVPlayer`） |
 | 媒体键、正在播放 | MediaPlayer |
-| 本地收藏、播放记录 | SwiftData |
+| 本地收藏、播放记录 | `Codable` + JSON 文件 |
 | 运行后端进程 | Foundation（`Process`） |
 | 日志 | `os.Logger` |
 | 测试 | Swift Testing（Xcode 自带） |

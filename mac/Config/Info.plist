@@ -8,5 +8,17 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!-- songline://open?url=<B 站链接>：浏览器书签、其他 App 把视频交给 Songline。 -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.songline.mac</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>songline</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

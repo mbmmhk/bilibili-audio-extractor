@@ -14,6 +14,21 @@ public enum BiliLink {
         text.contains("bilibili.com/video") || text.contains("b23.tv")
             || text.range(of: #"BV[0-9A-Za-z]{10}"#, options: .regularExpression) != nil
     }
+
+    /// 链接里的 BV 号和第几 P。b23.tv 短链要先跳转才知道，这里返回 nil。
+    public static func video(in text: String) -> (bvid: String, page: Int)? {
+        guard let r = text.range(of: #"BV[0-9A-Za-z]{10}"#, options: .regularExpression) else { return nil }
+        let page = text.range(of: #"[?&]p=(\d+)"#, options: .regularExpression)
+            .flatMap { Int(text[$0].drop { !$0.isNumber }) } ?? 1
+        return (String(text[r]), page)
+    }
+}
+
+extension Job {
+    /// 是不是这个 B 站视频（同一 P）的识别记录。
+    public func isVideo(bvid: String, page: Int) -> Bool {
+        video?.bvid == bvid && (video?.page ?? 1) == page
+    }
 }
 
 extension Job {
