@@ -1,6 +1,6 @@
 import clsx from "clsx";
-import { ArrowRight, AudioLines, Fingerprint, LoaderCircle } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, AudioLines, Bookmark, Fingerprint, LoaderCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { api, type Job } from "../lib/api";
 
 /** Pull a link or BV id out of whatever was pasted (share text often wraps it). */
@@ -11,15 +11,17 @@ function extractLink(text: string): string {
 }
 
 export function NewJob({
+  initialText = "",
   recent,
   onCreated,
   onOpen,
 }: {
+  initialText?: string;
   recent: Job[];
   onCreated: (j: Job) => void;
   onOpen: (id: string) => void;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [shazam, setShazam] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +125,8 @@ export function NewJob({
         </div>
       )}
 
+      <SendBookmark />
+
       <div className="mt-12 grid gap-4 text-sm sm:grid-cols-3">
         {[
           ["听", "本地语音识别转写歌词，1 小时音频约 2 分钟"],
@@ -134,6 +138,38 @@ export function NewJob({
             <div className="mt-1 text-zinc-500">{v}</div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** Bookmarklet for the browser's bookmarks bar: on a Bilibili video page it
+ * opens Songline in a new tab and starts recognising that video. */
+function SendBookmark() {
+  const link = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    const target = `${location.origin}/#/add?url=`;
+    // React refuses javascript: URLs in JSX, so set it on the element directly.
+    link.current?.setAttribute(
+      "href",
+      `javascript:void(window.open(${JSON.stringify(target)}+encodeURIComponent(location.href),'_blank'))`,
+    );
+  }, []);
+  return (
+    <div className="mt-10 hidden rounded-xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500 md:block dark:border-zinc-700">
+      <div className="flex flex-wrap items-center gap-3">
+        <span>在 B 站一键识别：把这个按钮拖到浏览器的书签栏</span>
+        <a
+          ref={link}
+          onClick={(e) => e.preventDefault()}
+          title="拖到书签栏，不要点击"
+          className="flex cursor-grab items-center gap-1.5 rounded-lg bg-accent-500 px-3 py-1.5 font-medium text-white active:cursor-grabbing"
+        >
+          <Bookmark className="size-4" /> 发送到 Songline
+        </a>
+      </div>
+      <div className="mt-2 text-xs text-zinc-400">
+        之后在 B 站看视频时点一下这个书签，就会在新标签页打开 Songline 并开始识别；识别过的视频会直接打开结果。Songline 需要开着。
       </div>
     </div>
   );

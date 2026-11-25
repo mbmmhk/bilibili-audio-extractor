@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { JobView } from "./components/JobView";
 import { NewJob } from "./components/NewJob";
 import { Sidebar } from "./components/Sidebar";
@@ -16,6 +16,12 @@ function useHashRoute(): [string | null, (id: string | null) => void] {
     location.hash = next ? `#/job/${next}` : "";
   }, []);
   return [id, go];
+}
+
+function sameVideo(url: string, bvid: string, page: number): boolean {
+  if (!url.includes(bvid)) return false;
+  const p = Number(url.match(/[?&]p=(\d+)/)?.[1] ?? 1);
+  return p === page;
 }
 
 export default function App() {
@@ -53,6 +59,32 @@ export default function App() {
     });
   }, []);
 
+  // "发送到 Songline" bookmark on a Bilibili page opens #/add?url=<that page>:
+  // open the result if this video was already done, else start recognising it.
+  const [prefill, setPrefill] = useState("");
+  const adding = useRef(false);
+  useEffect(() => {
+    const m = location.hash.match(/^#\/add\?(.*)$/);
+    if (!loaded || !m || adding.current) return;
+    adding.current = true;
+    const url = new URLSearchParams(m[1]).get("url") ?? "";
+    const done = jobs.find((j) => j.stage === "done" && j.video && sameVideo(url, j.video.bvid, j.video.page));
+    if (done) {
+      select(done.id);
+      return;
+    }
+    api
+      .create(url, true)
+      .then((j) => {
+        upsert(j);
+        select(j.id);
+      })
+      .catch(() => {
+        setPrefill(url); // let the user retry from the form
+        select(null);
+      });
+  }, [loaded, jobs, select, upsert]);
+
   const current = jobs.find((j) => j.id === selected) ?? null;
 
   return (
@@ -78,6 +110,8 @@ export default function App() {
           <div className="p-10 text-zinc-500">找不到这个任务，可能已被删除。</div>
         ) : (
           <NewJob
+            key={prefill}
+            initialText={prefill}
             recent={jobs}
             onCreated={(j) => {
               upsert(j);
