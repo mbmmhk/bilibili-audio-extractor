@@ -21,7 +21,7 @@ UV="${SONGLINE_UV:-$(command -v uv || true)}"
 [ -n "$UV" ] && [ -x "$UV" ] || die "找不到 uv。安装：curl -LsSf https://astral.sh/uv/install.sh | sh"
 [ "$(lipo -archs "$UV" 2>/dev/null)" = arm64 ] || die "uv 不是 Apple Silicon（arm64）版本：$UV"
 
-say "编译 Songline $VERSION（Release）…"
+say "编译 Songline ${VERSION}（Release）…"
 rm -rf "$BUILD/Build/Products/Release"
 SONGLINE_UV="$UV" xcodebuild \
   -project "$ROOT/mac/Songline.xcodeproj" -scheme Songline -configuration Release \
@@ -46,4 +46,4 @@ DMG="$DIST/Songline-$VERSION.dmg"
 rm -f "$DMG"
 hdiutil create -volname "Songline $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
 
-say "完成：$DMG（$(du -h "$DMG" | cut -f1)）"
+say "完成：${DMG}（$(du -h "$DMG" | cut -f1)）"
