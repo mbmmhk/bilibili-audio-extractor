@@ -152,7 +152,12 @@ function Row({
           {fmtTime(e.end, long)}
         </button>
 
-        <button className="min-w-0 flex-1 text-left" onClick={() => setOpen((o) => !o)}>
+        <button
+          type="button"
+          className="min-w-0 flex-1 text-left enabled:cursor-pointer enabled:hover:text-accent-600"
+          disabled={!canPlay}
+          onClick={() => onPlay(e.start)}
+        >
           <div className="truncate font-medium">{e.song?.title ?? "未识别"}</div>
           <div className="truncate text-sm text-zinc-500">
             <span className="tabular sm:hidden">{fmtTime(e.start, long)} · </span>
