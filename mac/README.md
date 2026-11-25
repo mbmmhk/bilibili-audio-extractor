@@ -20,6 +20,25 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 - 识别记录在 `~/.songline`，和命令行版、一键安装版共用。
 - 如果 8765 端口已经有一个 Songline 在跑（比如你同时开着 `songline serve`），App 会直接用那个。
 
+## 打包和发布
+
+```bash
+mac/scripts/package.sh 0.1.0
+```
+
+生成 `mac/dist/Songline-0.1.0.dmg`：Release 版 App，只支持 Apple Silicon，uv 也打在里面，朋友的电脑上不用装 Xcode 或 uv。
+
+正式发布：给要发布的提交打一个版本号标签并推上去，CI 会自动打包，并发布到 GitHub Releases：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+App 目前用的是本机签名（ad-hoc），没有经过 Apple 公证。朋友第一次打开时，要在「系统设置 → 隐私与安全性」里点「仍要打开」。
+
+App 图标由 `scripts/make-icon.swift` 画出来，想改设计就改这个脚本，再运行 `swift mac/scripts/make-icon.swift`。
+
 ## 只改界面
 
 不想跑 Python 也行：每个界面都有 `#Preview`，用的是 `MockSonglineService` 里的假数据。打开 `Packages/SonglineKit/Sources/SonglineUI/RootView.swift`，在 Xcode 右侧打开 Canvas（⌥⌘↩）就能看到整个播放器。
@@ -30,7 +49,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 swift test --package-path mac/Packages/SonglineKit
 ```
 
-CI 每次提交都会跑这些测试，并编译整个 App。
+CI 每次提交都会跑这些测试，并用 `package.sh` 打一个 `.dmg`（在 CI 运行页面的 Artifacts 里，可以下载下来试用）。
 
 ## 代码放哪
 

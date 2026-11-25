@@ -21,6 +21,7 @@ public final class SonglineAppModel {
     @ObservationIgnored private let systemIntegration: Bool
     /// 后端还没就绪时收到的链接，就绪后再打开。
     @ObservationIgnored private var pendingLinks: [String] = []
+    @ObservationIgnored private var lastRefresh = Date.distantPast
 
     public init(backend: BackendRuntime = BackendRuntime(), store: LibraryStore = LibraryStore(file: LibraryStore.standardFile())) {
         self.backend = backend
@@ -43,6 +44,16 @@ public final class SonglineAppModel {
             connect(HTTPSonglineService(baseURL: url))
         }
     }
+
+    /// App 切回前台时调用：重新读取记录，这样在网页版或命令行里的改动也能看到。
+    /// 频繁切换窗口时最多每 `refreshInterval` 秒刷新一次。
+    public func appDidBecomeActive(now: Date = Date()) {
+        guard let library, now.timeIntervalSince(lastRefresh) >= Self.refreshInterval else { return }
+        lastRefresh = now
+        Task { await library.refresh() }
+    }
+
+    static let refreshInterval: TimeInterval = 5
 
     /// App 退出前调用。
     public func shutdown() {

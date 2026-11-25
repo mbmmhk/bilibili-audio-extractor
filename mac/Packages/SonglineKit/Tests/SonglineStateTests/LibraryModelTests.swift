@@ -93,3 +93,57 @@ import SonglineCore
     model.player?.play(job.tracks, startAt: 2)
     #expect(model.store.recent.first?.title == job.tracks[2].title)
 }
+
+// MARK: - 搜索、自动刷新
+
+/// 记录会在「别处」改变的假服务：模拟在网页版里删掉了一条。
+final class ChangingService: SonglineService, @unchecked Sendable {
+    private let lock = NSLock()
+    private var current = MockSonglineService.samples
+    func remove(_ id: String) { lock.lock(); current.removeAll { $0.id == id }; lock.unlock() }
+    private var mock: MockSonglineService { lock.lock(); defer { lock.unlock() }; return MockSonglineService(jobs: current) }
+    func jobs() async throws -> [Job] { try await mock.jobs() }
+    func job(id: String) async throws -> Job { try await mock.job(id: id) }
+    func createJob(url: String, shazam: Bool) async throws -> Job { try await mock.createJob(url: url, shazam: shazam) }
+    func cancelJob(id: String) async throws -> Job { try await mock.cancelJob(id: id) }
+    func deleteJob(id: String) async throws {}
+    func transcript(id: String) async throws -> [Segment] { [] }
+    func events(id: String) -> AsyncThrowingStream<Job, Error> { mock.events(id: id) }
+    func audioURL(id: String) -> URL { mock.audioURL(id: id) }
+}
+
+@MainActor
+@Test func refreshPicksUpChangesMadeElsewhere() async {
+    let service = ChangingService()
+    let library = LibraryModel(service: service)
+    await library.refresh()
+    library.selection = .job("demo-1119")
+    service.remove("demo-1119")
+    await library.refresh()
+    #expect(library.job("demo-1119") == nil)
+    #expect(library.selection == .recognize)
+}
+
+@MainActor
+@Test func becomingActiveRefreshesAtMostEveryFewSeconds() async throws {
+    let service = ChangingService()
+    let model = SonglineAppModel(previewing: service)
+    await model.library?.refresh()
+    service.remove("demo-1119")
+    let t0 = Date()
+    model.appDidBecomeActive(now: t0)
+    try await Task.sleep(for: .milliseconds(100))
+    #expect(model.library?.job("demo-1119") == nil)
+    // 2 秒内再次切回：不刷新。
+    service.remove("demo-failed")
+    model.appDidBecomeActive(now: t0.addingTimeInterval(2))
+    try await Task.sleep(for: .milliseconds(100))
+    #expect(model.library?.job("demo-failed") != nil)
+}
+
+@MainActor
+@Test func searchGoesThroughTheLibrary() async {
+    let library = LibraryModel(service: MockSonglineService())
+    await library.refresh()
+    #expect(library.search("孙燕姿").tracks.map(\.title) == ["遇见"])
+}

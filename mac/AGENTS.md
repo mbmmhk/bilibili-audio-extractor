@@ -38,6 +38,7 @@
 - `job(_ id:) -> Job?`
 - `recognize(_ text:shazam:)`：可以传链接、BV 号或分享文字。一般用 `open(_:)` 更好：识别过的视频不会重复识别。
 - `lyrics(for jobID:) async throws -> Lyrics`：这场回放的歌词（语音转写）。
+- `search(_ query:) -> SearchResults`：跨所有歌单搜歌名、原唱、歌单标题、UP 主，空格分开的每个词都要匹配。结果里 `tracks` 是歌（歌名匹配的排前面），`jobs` 是歌单。同步返回，可以边输入边搜。
 - `rerun(_:)`、`cancel(_:)`、`delete(_:)`、`refresh()`；`loadError`。
 
 **`PlayerModel`**（播放）
@@ -70,9 +71,9 @@
 - **拖链接进窗口**：`.onDrop` / `.dropDestination` 拿到文字或 URL 后调用 `model.open(link:)`。
 - **菜单栏迷你播放器**：用 `MenuBarExtra` 场景，数据全部来自 `PlayerModel`。
 
-还没有的：**搜索**（跨歌单搜歌名、歌手）。需要的话提出来。
+- **搜索**：搜索框 + 结果页，用 `library.search(_:)`。
 
-已知限制：识别记录只在 App 里操作时才会更新。在网页版或命令行里删除、新建的记录，App 要重新打开或调用 `library.refresh()` 才会看到。
+切回 App 时会自动刷新记录（最多每 5 秒一次），在网页版或命令行里的改动也能看到。界面不用自己刷新。
 
 ## 约定
 

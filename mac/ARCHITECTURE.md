@@ -1,6 +1,6 @@
 # Songline for Mac：架构设计
 
-> 状态：第 1 步和第 2 步的系统接口已实现（分支 `mac-app`），界面由 Codex 按 [AGENTS.md](AGENTS.md) 制作；第 3 步待做。
+> 状态：第 1、2 步的系统接口和第 3 步的打包发布已实现（分支 `mac-app`），界面由 Codex 按 [AGENTS.md](AGENTS.md) 制作。还没做：Sparkle 自动更新、签名和公证。
 
 目标：做一个原生的 Mac 音乐播放器，把直播回放当歌单来听。
 双击打开，不需要终端；朋友们**用 Xcode 打开就能改代码、点 Run 运行**。
@@ -212,4 +212,4 @@ notInstalled → installing(步骤, 进度) → starting → running(baseURL)
 
 1. **能听的 App**：工程骨架；Core、API、Backend 模块；首次安装引导；侧边栏 + 歌单页 + 底部播放条；识别新回放（含进度）；按歌播放和切歌。
 2. **像播放器**：歌词页、只听歌模式、播放队列、媒体键和正在播放、菜单栏迷你播放器、拖链接到 Dock。
-3. **我的音乐和发给朋友**：我喜欢的歌、最近播放、搜索；打包 `.dmg`、Sparkle 自动更新、CI 自动出包；有开发者账号后加签名和公证。
+3. **我的音乐和发给朋友**：我喜欢的歌、最近播放、搜索；打包 `.dmg`、CI 自动出包（`scripts/package.sh`、`.github/workflows/release.yml`）。还没做：Sparkle 自动更新（需要生成更新签名密钥并存进 GitHub 的 Secrets），以及有开发者账号后的签名和公证。

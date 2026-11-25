@@ -29,12 +29,17 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
       - name: Swift package tests
         run: swift test --package-path mac/Packages/SonglineKit
-      - name: Build the app (unsigned)
-        run: |
-          xcodebuild -project mac/Songline.xcodeproj -scheme Songline -configuration Debug \
-            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      # 和正式发布用同一个脚本：每个 PR 都检查能不能打包（包括 uv 有没有打进 App）。
+      - name: Build Songline.app and the .dmg
+        run: mac/scripts/package.sh "0.0.0-ci.${{ github.run_number }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Songline-dmg
+          path: mac/dist/*.dmg
+          retention-days: 14
 
   frontend:
     runs-on: ubuntu-latest

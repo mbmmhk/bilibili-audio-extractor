@@ -26,6 +26,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { await model.start() }
     }
 
+    /// 切回 App 时刷新记录（在网页版或命令行里的改动也能看到）。
+    func applicationDidBecomeActive(_ notification: Notification) {
+        model.appDidBecomeActive()
+    }
+
     /// 退出 App 时一并关掉后台的识别服务。
     func applicationWillTerminate(_ notification: Notification) {
         model.shutdown()

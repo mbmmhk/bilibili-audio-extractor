@@ -26,10 +26,13 @@ public final class LibraryModel {
 
     public func job(_ id: String) -> Job? { jobs.first { $0.id == id } }
 
+    /// 重新读取所有记录（在网页版或命令行里新建、删除的也会出现）。
     public func refresh() async {
         do {
             jobs = try await service.jobs()
             loadError = nil
+            // 选中的那条在别处被删掉了，回到识别页。
+            if case let .job(id) = selection, job(id) == nil { selection = .recognize }
             jobs.filter { !$0.isFinished }.forEach(watch)
         } catch {
             loadError = error.localizedDescription
@@ -56,6 +59,11 @@ public final class LibraryModel {
         try await recognize(text, shazam: shazam)
         guard case let .job(id) = selection, let job = job(id) else { throw CancellationError() }
         return job
+    }
+
+    /// 跨所有歌单搜歌名、原唱、歌单标题、UP 主。空格分开的每个词都要匹配上。
+    public func search(_ query: String) -> SearchResults {
+        Search.run(query, in: jobs)
     }
 
     /// 一场回放的歌词（语音转写）。识别完的会缓存；识别中的每次重新取，因为还在增加。
