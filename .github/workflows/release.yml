@@ -1,0 +1,36 @@
+name: Release Mac app
+
+# 推一个版本号标签就发布：git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      # uv 会被打进 App，朋友的电脑上不用另外装。
+      - uses: astral-sh/setup-uv@v6
+      - run: swift test --package-path mac/Packages/SonglineKit
+      - name: Build Songline.app and the .dmg
+        run: BUILD_NUMBER="${{ github.run_number }}" mac/scripts/package.sh "${GITHUB_REF_NAME#v}"
+      - name: Publish the release
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cat > notes.md <<EOF
+          ## 安装
+
+          1. 下载下面的 \`Songline-$VERSION.dmg\`，打开后把 Songline 拖进「应用程序」。
+          2. 第一次打开时，macOS 可能提示"无法验证开发者"：到「系统设置 → 隐私与安全性」，在下方找到 Songline，点「仍要打开」。之后就正常了。
+          3. 第一次运行会自动装好 Python 环境，并下载语音模型（约 1.6 GB），窗口里有进度。
+
+          只支持 Apple Silicon（M 系列芯片）的 Mac，macOS 14 及以上。
+          EOF
+          gh release create "$GITHUB_REF_NAME" mac/dist/Songline-"$VERSION".dmg \
+            --title "Songline $VERSION" --notes-file notes.md --generate-notes

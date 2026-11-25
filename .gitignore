@@ -1,1 +1,12 @@
 .DS_Store
+
+# Mac App
+xcuserdata/
+*.xcuserstate
+mac/**/.build/
+mac/**/.swiftpm/
+
+# Mac 打包产物
+mac/build/
+mac/build.log
+mac/dist/
